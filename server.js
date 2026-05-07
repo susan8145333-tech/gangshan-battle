@@ -289,6 +289,7 @@ function publicState() {
     questions: allQuestions(),
     levels: LEVELS,
     leaderboard: leaderboard(),
+    rankings: rankedStudents(),
     classColors: CLASS_COLORS,
   };
 }
@@ -377,6 +378,10 @@ function attackPower(student) {
 }
 
 function leaderboard() {
+  return rankedStudents().slice(0, 5);
+}
+
+function rankedStudents() {
   return Object.values(gameData.students)
     .map(s => ({
       id: s.id,
@@ -391,7 +396,11 @@ function leaderboard() {
       levelName: studentLevelInfo(s).currentLevelName,
     }))
     .sort((a, b) => b.score - a.score || b.lands - a.lands || b.answered - a.answered)
-    .slice(0, 5);
+    .map((row, index, rows) => ({
+      ...row,
+      rank: index + 1,
+      gapToPrevious: index === 0 ? 0 : Math.max(0, (rows[index - 1].score || 0) - (row.score || 0)),
+    }));
 }
 
 function applyCorrectAnswer(student, territoryName) {

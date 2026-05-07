@@ -479,6 +479,33 @@ h1 {
   gap: 6px;
 }
 
+.leader-section-title {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.my-rank-card {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #eff6ff, #fff7ed);
+}
+
+.my-rank-card strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.my-rank-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .leader-row {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -487,6 +514,11 @@ h1 {
   border-radius: 8px;
   background: linear-gradient(90deg, #fff7ed, #f8fafc);
   border: 1px solid #ffedd5;
+}
+
+.leader-row.me-row {
+  border-color: #facc15;
+  background: linear-gradient(90deg, #fef3c7, #eff6ff);
 }
 
 .leader-row b {

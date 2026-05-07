@@ -317,16 +317,49 @@ function renderLevel() {
 function renderLeaderboard() {
   const list = $('#leaderboardList');
   if (!list || !state.data) return;
-  const rows = state.data.leaderboard || [];
-  list.innerHTML = rows.length
-    ? rows.map((row, index) => `
+  const topRows = state.data.leaderboard || [];
+  const rankings = state.data.rankings || topRows.map((row, index) => ({ ...row, rank: index + 1, gapToPrevious: 0 }));
+  const me = state.student ? rankings.find(row => row.id === state.student.id) : null;
+  const myIndex = me ? rankings.findIndex(row => row.id === state.student.id) : -1;
+  const nearby = myIndex >= 0
+    ? rankings.slice(Math.max(0, myIndex - 2), Math.min(rankings.length, myIndex + 3))
+    : [];
+
+  if (!rankings.length) {
+    list.innerHTML = '<small>還沒有排行資料。</small>';
+    return;
+  }
+
+  const myPanel = me ? `
+    <div class="my-rank-card">
+      <strong>我的排名 #${me.rank}</strong>
+      <span>${me.gapToPrevious > 0 ? `距離上一名差 ${me.gapToPrevious} 分` : '目前沒有需要追的上一名'}</span>
+    </div>
+  ` : '';
+
+  const topPanel = `
+    <div class="leader-section-title">總榜 Top 5</div>
+    ${topRows.map(row => `
       <div class="leader-row">
-        <b>#${index + 1}</b>
+        <b>#${row.rank}</b>
         <span>${row.classNum} ${escapeHtml(row.name)}</span>
-        <small>${escapeHtml(row.levelName)} · 攻${row.attackPower} · ${row.answered}題 · ${row.lands}地</small>
+        <small>${row.score}分 · ${escapeHtml(row.levelName)} · 攻${row.attackPower} · ${row.answered}題 · ${row.lands}地</small>
       </div>
-    `).join('')
-    : '<small>還沒有排行資料。</small>';
+    `).join('')}
+  `;
+
+  const nearbyPanel = nearby.length ? `
+    <div class="leader-section-title">附近對手</div>
+    ${nearby.map(row => `
+      <div class="leader-row ${row.id === state.student?.id ? 'me-row' : ''}">
+        <b>#${row.rank}</b>
+        <span>${row.id === state.student?.id ? '我' : `${row.classNum} ${escapeHtml(row.name)}`}</span>
+        <small>${row.score}分 · ${row.id === state.student?.id ? '目前位置' : `差距 ${Math.abs((me?.score || 0) - (row.score || 0))} 分`}</small>
+      </div>
+    `).join('')}
+  ` : '';
+
+  list.innerHTML = `${myPanel}${topPanel}${nearbyPanel}`;
 }
 
 function renderScores() {
