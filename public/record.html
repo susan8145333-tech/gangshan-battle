@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>老師錄音室 — 岡山大作戰</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #1a1a2e; color: #fff; min-height: 100vh; }
+
+#top-bar {
+  background: #16213e; padding: 14px 24px; border-bottom: 2px solid #f39c12;
+  display: flex; align-items: center; justify-content: space-between;
+}
+#top-bar h1 { color: #f39c12; font-size: 1.2rem; }
+#top-bar a { color: #aaa; font-size: 0.85rem; text-decoration: none; }
+#top-bar a:hover { color: #fff; }
+
+#info-bar {
+  background: rgba(243,156,18,0.1); border: 1px solid rgba(243,156,18,0.3);
+  margin: 16px 24px; border-radius: 10px; padding: 12px 16px;
+  font-size: 0.88rem; color: #f0c060; line-height: 1.7;
+}
+
+#progress-bar {
+  margin: 0 24px 16px; display: flex; align-items: center; gap: 12px;
+  font-size: 0.85rem; color: #aaa;
+}
+#progress-fill {
+  flex: 1; height: 8px; background: rgba(255,255,255,0.1);
+  border-radius: 4px; overflow: hidden;
+}
+#progress-fill-inner { height: 100%; background: #2ecc71; border-radius: 4px; transition: width 0.3s; }
+
+#vocab-list { padding: 0 24px 40px; display: flex; flex-direction: column; gap: 10px; }
+
+.vocab-row {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px; padding: 14px 16px;
+  display: grid; grid-template-columns: 36px 1fr auto auto auto auto;
+  align-items: center; gap: 12px; transition: background 0.2s;
+}
+.vocab-row.has-recording { border-color: rgba(46,204,113,0.4); background: rgba(46,204,113,0.06); }
+.vocab-row.recording-active { border-color: #e74c3c; background: rgba(231,76,60,0.1); animation: glow 1s infinite alternate; }
+@keyframes glow { from { box-shadow: 0 0 5px rgba(231,76,60,0.3); } to { box-shadow: 0 0 15px rgba(231,76,60,0.7); } }
+
+.vocab-num { color: #666; font-size: 0.85rem; text-align: center; }
+.vocab-text { }
+.vocab-en { font-size: 1.05rem; font-weight: bold; color: #fff; }
+.vocab-zh { font-size: 0.85rem; color: #aaa; margin-top: 2px; }
+
+.status-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.status-dot.recorded { background: #2ecc71; }
+.status-dot.tts { background: #e67e22; }
+
+.status-label { font-size: 0.75rem; width: 52px; text-align: center; }
+.status-label.recorded { color: #2ecc71; }
+.status-label.tts { color: #e67e22; }
+
+.btn {
+  padding: 8px 14px; border-radius: 8px; border: none;
+  font-size: 0.82rem; font-weight: bold; cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s; flex-shrink: 0;
+}
+.btn:active { transform: scale(0.95); opacity: 0.8; }
+.btn-record { background: #e74c3c; color: #fff; }
+.btn-record.recording { background: #c0392b; animation: pulse-btn 0.8s infinite alternate; }
+@keyframes pulse-btn { from { box-shadow: 0 0 0 rgba(231,76,60,0.5); } to { box-shadow: 0 0 10px rgba(231,76,60,0.8); } }
+.btn-play { background: #3498db; color: #fff; }
+.btn-play:disabled { background: rgba(52,152,219,0.3); cursor: not-allowed; opacity: 0.5; }
+.btn-delete { background: rgba(255,255,255,0.1); color: #aaa; }
+.btn-delete:disabled { opacity: 0.3; cursor: not-allowed; }
+
+#global-controls {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #16213e; border-top: 1px solid rgba(255,255,255,0.1);
+  padding: 12px 24px; display: flex; align-items: center; gap: 12px;
+}
+.btn-test-all { background: #9b59b6; color: #fff; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: bold; }
+.global-hint { color: #666; font-size: 0.8rem; flex: 1; }
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+  <h1>🎙 老師錄音室</h1>
+  <div style="display:flex;gap:16px;align-items:center">
+    <a href="/teacher.html">← 教師後台</a>
+    <a href="/">← 學生遊戲</a>
+  </div>
+</div>
+
+<div id="info-bar">
+  📌 使用說明：點 <strong>🔴 錄音</strong> 開始錄，唸完後再按一次停止。建議靠近麥克風，清楚唸出英文句子。<br>
+  ✅ 綠色 = 已錄音（學生會聽到你的聲音）　🟠 橘色 = 使用電腦發音（尚未錄音）
+</div>
+
+<div id="progress-bar">
+  <span id="progress-text">載入中...</span>
+  <div id="progress-fill"><div id="progress-fill-inner" style="width:0%"></div></div>
+</div>
+
+<div id="vocab-list"></div>
+
+<div id="global-controls">
+  <button class="btn-test-all" onclick="playAll()">▶ 全部播放測試</button>
+  <div class="global-hint">錄音後學生按播放鍵只會聽到你的聲音，不會念中文</div>
+</div>
+
+<script>
+const VOCAB = [
+  { id:'q01', en:'Sit down.',                 zh:'坐下' },
+  { id:'q02', en:'Stand up.',                 zh:'站起來' },
+  { id:'q03', en:'Hands up.',                 zh:'舉起雙手' },
+  { id:'q04', en:'Be quiet.',                 zh:'安靜' },
+  { id:'q05', en:"Don't run.",                zh:'不要跑' },
+  { id:'q06', en:'Open your book.',           zh:'打開你的書' },
+  { id:'q07', en:'Close your book.',          zh:'關上你的書' },
+  { id:'q08', en:'May I come in?',            zh:'我可以進來嗎？' },
+  { id:'q09', en:'May I go to the restroom?', zh:'可以去廁所嗎？' },
+  { id:'q10', en:'May I borrow your eraser?', zh:'我可以借你的橡皮擦嗎？' },
+  { id:'q11', en:'Thank you very much.',      zh:'謝謝你' },
+  { id:'q12', en:"Sorry, I'm late.",          zh:'抱歉，我遲到了' },
+  { id:'q13', en:'Raise your hand.',          zh:'舉手' },
+  { id:'q14', en:'Say it again.',             zh:'再說一次' },
+  { id:'q15', en:'Repeat after me.',          zh:'跟我重複說' },
+  { id:'q16', en:"Don't run in the hallway.", zh:'不要在走廊奔跑' },
+  { id:'q17', en:'Give me a hand.',           zh:'幫我一個忙' },
+  { id:'q18', en:'Clap your hands!',          zh:'拍手！' },
+  { id:'q19', en:'Turn around.',              zh:'轉身' },
+  { id:'q20', en:'Look at the board.',        zh:'看黑板' },
+  { id:'q21', en:'Touch your nose.',          zh:'摸鼻子' },
+  { id:'q22', en:"You're welcome!",           zh:'不客氣！' },
+  { id:'q23', en:'No talking in class.',      zh:'上課不可以說話' },
+  { id:'q24', en:'Look at me.',               zh:'看我' },
+  { id:'q25', en:'Write it down.',            zh:'寫下來' },
+];
+
+let recorded = new Set();
+let recorders = {};  // qid -> { mediaRecorder, chunks, stream }
+let currentRecording = null;
+
+async function init() {
+  const res = await fetch('/api/audio-status');
+  const data = await res.json();
+  recorded = new Set(data.recorded);
+  renderList();
+}
+
+function renderList() {
+  const count = recorded.size;
+  document.getElementById('progress-text').textContent = `已錄音 ${count} / ${VOCAB.length} 句`;
+  document.getElementById('progress-fill-inner').style.width = `${(count/VOCAB.length)*100}%`;
+
+  const list = document.getElementById('vocab-list');
+  list.innerHTML = '';
+
+  VOCAB.forEach((v, i) => {
+    const hasRec = recorded.has(v.id);
+    const row = document.createElement('div');
+    row.className = `vocab-row${hasRec ? ' has-recording' : ''}`;
+    row.id = `row-${v.id}`;
+
+    row.innerHTML = `
+      <div class="vocab-num">${i+1}</div>
+      <div class="vocab-text">
+        <div class="vocab-en">${v.en}</div>
+        <div class="vocab-zh">${v.zh}</div>
+      </div>
+      <div class="status-dot ${hasRec ? 'recorded' : 'tts'}"></div>
+      <div class="status-label ${hasRec ? 'recorded' : 'tts'}">${hasRec ? '已錄音' : '電腦音'}</div>
+      <button class="btn btn-record" id="rec-btn-${v.id}" onclick="toggleRecord('${v.id}')">🔴 錄音</button>
+      <button class="btn btn-play" id="play-btn-${v.id}" onclick="playVocab('${v.id}','${v.en}')" ${hasRec ? '' : 'title="使用電腦發音"'}>▶ 播放</button>
+      <button class="btn btn-delete" id="del-btn-${v.id}" onclick="deleteRecording('${v.id}')" ${hasRec ? '' : 'disabled'}>🗑</button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+async function toggleRecord(qid) {
+  if (currentRecording && currentRecording !== qid) {
+    await stopRecord(currentRecording);
+  }
+
+  if (recorders[qid] && recorders[qid].mediaRecorder && recorders[qid].mediaRecorder.state === 'recording') {
+    await stopRecord(qid);
+  } else {
+    await startRecord(qid);
+  }
+}
+
+async function startRecord(qid) {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    const chunks = [];
+    mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mr.onstop = () => saveRecording(qid, chunks, stream);
+    mr.start();
+    recorders[qid] = { mediaRecorder: mr, chunks, stream };
+    currentRecording = qid;
+
+    const btn = document.getElementById(`rec-btn-${qid}`);
+    btn.textContent = '⏹ 停止';
+    btn.classList.add('recording');
+    document.getElementById(`row-${qid}`).classList.add('recording-active');
+  } catch(e) {
+    alert('無法使用麥克風，請確認瀏覽器已授權');
+  }
+}
+
+async function stopRecord(qid) {
+  const rec = recorders[qid];
+  if (!rec) return;
+  rec.mediaRecorder.stop();
+  currentRecording = null;
+
+  const btn = document.getElementById(`rec-btn-${qid}`);
+  btn.textContent = '🔴 錄音';
+  btn.classList.remove('recording');
+  document.getElementById(`row-${qid}`).classList.remove('recording-active');
+}
+
+async function saveRecording(qid, chunks, stream) {
+  stream.getTracks().forEach(t => t.stop());
+  const blob = new Blob(chunks, { type: 'audio/webm' });
+
+  await fetch(`/api/upload-audio/${qid}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'audio/webm' },
+    body: blob
+  });
+
+  recorded.add(qid);
+  renderList();
+}
+
+function playVocab(qid, en) {
+  const audio = new Audio(`/audio/${qid}.wav`);
+  audio.onerror = () => {
+    // fallback to TTS
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(en);
+    utt.lang = 'en-US'; utt.rate = 0.82;
+    window.speechSynthesis.speak(utt);
+  };
+  audio.play().catch(() => {
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(en);
+    utt.lang = 'en-US'; utt.rate = 0.82;
+    window.speechSynthesis.speak(utt);
+  });
+}
+
+async function deleteRecording(qid) {
+  if (!confirm('確定刪除這個錄音？')) return;
+  await fetch(`/api/upload-audio/${qid}`, { method: 'DELETE' });
+  recorded.delete(qid);
+  renderList();
+}
+
+let playAllIdx = 0;
+function playAll() {
+  playAllIdx = 0;
+  playNextInList();
+}
+function playNextInList() {
+  if (playAllIdx >= VOCAB.length) return;
+  const v = VOCAB[playAllIdx++];
+  const audio = new Audio(`/audio/${v.id}.wav`);
+  const onEnd = () => setTimeout(playNextInList, 800);
+  audio.onended = onEnd;
+  audio.onerror = () => {
+    const utt = new SpeechSynthesisUtterance(v.en);
+    utt.lang = 'en-US'; utt.rate = 0.82;
+    utt.onend = () => setTimeout(playNextInList, 600);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utt);
+  };
+  audio.play().catch(() => {
+    const utt = new SpeechSynthesisUtterance(v.en);
+    utt.lang = 'en-US'; utt.rate = 0.82;
+    utt.onend = () => setTimeout(playNextInList, 600);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utt);
+  });
+}
+
+init();
+</script>
+</body>
+</html>

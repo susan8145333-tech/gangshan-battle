@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>岡山大作戰教師面板</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="teacher-body">
+  <header class="teacher-header">
+    <div>
+      <p class="eyebrow">教師面板</p>
+      <h1>岡山大作戰</h1>
+    </div>
+    <div class="teacher-actions">
+      <a class="soft-button" href="/" target="_blank">學生畫面</a>
+      <a class="primary-button compact-action" href="/?trialLevel=festival" target="_blank">老師試玩第二關</a>
+      <a class="primary-button" href="/api/export.xls">匯出 Excel</a>
+      <button id="resetMapButton" class="soft-button" type="button">重置地圖</button>
+      <button id="resetAllButton" class="danger-button" type="button">全部重置</button>
+    </div>
+  </header>
+
+  <main class="teacher-grid">
+    <section class="teacher-card wide">
+      <h2>校園土地</h2>
+      <div class="teacher-map">
+        <img src="map.jpg" alt="岡山國小校園地圖">
+        <svg id="teacherMapSvg" viewBox="0 0 1243 888" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+    </section>
+
+    <section class="teacher-card">
+      <h2>班級戰況</h2>
+      <div class="teacher-stats">
+        <article class="teacher-stat class-502">
+          <span>502 班</span>
+          <strong id="teacher502Score">0</strong>
+          <small id="teacher502Meta">0 人 · 0 地</small>
+        </article>
+        <article class="teacher-stat class-503">
+          <span>503 班</span>
+          <strong id="teacher503Score">0</strong>
+          <small id="teacher503Meta">0 人 · 0 地</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="teacher-card">
+      <h2>最新錄音</h2>
+      <div id="recordingList" class="audio-list"></div>
+    </section>
+
+    <section class="teacher-card wide">
+      <div class="section-heading">
+        <h2>題庫管理</h2>
+        <span id="questionCountLabel">0 題</span>
+      </div>
+      <form id="questionForm" class="question-editor">
+        <input id="questionIdInput" type="hidden">
+        <label>
+          關卡
+          <select id="questionLevelInput">
+            <option value="classroom">第一關 課室英語</option>
+            <option value="festival">第二關 節慶英語</option>
+          </select>
+        </label>
+        <label>
+          英文
+          <input id="questionEnInput" type="text" placeholder="例：Christmas tree">
+        </label>
+        <label>
+          中文
+          <input id="questionZhInput" type="text" placeholder="例：聖誕樹">
+        </label>
+        <div class="editor-actions">
+          <button id="saveQuestionButton" class="primary-button" type="submit">新增題目</button>
+          <button id="cancelEditButton" class="soft-button" type="button" hidden>取消修改</button>
+        </div>
+      </form>
+      <div id="questionStatus" class="teacher-status"></div>
+      <div class="table-wrap question-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>關卡</th>
+              <th>英文</th>
+              <th>中文</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="questionRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="teacher-card wide">
+      <h2>學生總覽</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>班級</th>
+              <th>英文名字</th>
+              <th>分數</th>
+              <th>金幣</th>
+              <th>答對</th>
+              <th>答錯</th>
+              <th>正確率</th>
+              <th>關卡</th>
+              <th>攻擊力</th>
+              <th>最佳連勝</th>
+              <th>錄音</th>
+              <th>教師權限</th>
+            </tr>
+          </thead>
+          <tbody id="studentRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="teacher-card wide">
+      <h2>錯題整理</h2>
+      <div id="wrongList" class="wrong-list"></div>
+    </section>
+
+    <section class="teacher-card wide">
+      <h2>最近答題明細</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>時間</th>
+              <th>班級</th>
+              <th>英文名字</th>
+              <th>土地</th>
+              <th>關卡</th>
+              <th>英文</th>
+              <th>學生答案</th>
+              <th>結果</th>
+            </tr>
+          </thead>
+          <tbody id="answerRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="teacher.js"></script>
+</body>
+</html>

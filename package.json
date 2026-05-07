@@ -1,0 +1,16 @@
+{
+  "name": "gangshan-battle",
+  "version": "1.0.0",
+  "description": "岡山大作戰 英文學習遊戲",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.16.0"
+  }
+}

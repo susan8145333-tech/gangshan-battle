@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: gangshan-battle
+    env: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GAME_DATA_DIR
+        value: /var/data
+    disk:
+      name: gangshan-battle-data
+      mountPath: /var/data
+      sizeGB: 1

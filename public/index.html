@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>岡山大作戰</title>
+  <script>
+    if (location.protocol === 'file:') {
+      location.replace('http://localhost:3019/');
+    }
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="loginView" class="login-view">
+    <section class="login-panel">
+      <p class="eyebrow">岡山國小學力檢測複習</p>
+      <h1>岡山大作戰</h1>
+      <p class="login-subtitle">選班級，用英文名字登入，幫自己的班級佔領校園土地。</p>
+
+      <div class="class-picker" role="group" aria-label="班級">
+        <button class="class-choice" data-class="502" type="button">502</button>
+        <button class="class-choice" data-class="503" type="button">503</button>
+      </div>
+
+      <label class="field-label" for="nameInput">英文名字</label>
+      <input id="nameInput" class="name-input" autocomplete="given-name" placeholder="例如 Susan" maxlength="24">
+      <button id="loginButton" class="primary-button" type="button">開始攻佔</button>
+      <p id="loginHint" class="hint"></p>
+    </section>
+  </main>
+
+  <main id="gameView" class="game-view" hidden>
+    <header class="game-header">
+      <div>
+        <p class="eyebrow">岡山大作戰</p>
+        <h2 id="playerTitle">502 Susan</h2>
+      </div>
+      <div class="score-strip">
+        <div><span id="myScore">0</span><small>分數</small></div>
+        <div><span id="myCoins">0</span><small>金幣</small></div>
+        <div><span id="myStreak">0</span><small>連勝</small></div>
+        <div><span id="myAttack">1</span><small>攻擊</small></div>
+      </div>
+    </header>
+
+    <section class="battle-layout">
+      <div class="map-side">
+        <div class="class-scoreboard">
+          <article class="class-score class-502">
+            <strong>502</strong>
+            <span id="score502">0 分</span>
+            <small id="land502">0 塊土地</small>
+          </article>
+          <article class="class-score class-503">
+            <strong>503</strong>
+            <span id="score503">0 分</span>
+            <small id="land503">0 塊土地</small>
+          </article>
+        </div>
+        <div class="map-shell">
+          <div class="map-titleplate">
+            <strong>岡山校園戰場</strong>
+            <span>點選教室發起攻佔</span>
+          </div>
+          <img src="map.jpg" alt="岡山國小校園地圖" class="school-map">
+          <svg id="mapSvg" viewBox="0 0 1243 888" preserveAspectRatio="xMidYMid meet"></svg>
+          <div id="mapPrompt" class="map-prompt">點選一塊土地開始攻打</div>
+        </div>
+      </div>
+
+      <aside class="play-panel">
+        <div class="target-box">
+          <span id="levelBadge">第一關 課室英語</span>
+          <span>目標土地</span>
+          <strong id="targetName">尚未選擇</strong>
+          <div id="targetOwner" class="target-owner">目前尚未被佔領</div>
+          <small id="targetPower">先點地圖上的大區域</small>
+        </div>
+
+        <section class="shop-card">
+          <div class="question-topline">
+            <span>卡牌與商店</span>
+            <strong id="boostBadge">重擊 +0</strong>
+          </div>
+          <div class="card-grid">
+            <button class="card-button" data-card="boost" type="button">重擊 <b id="cardBoost">0</b><span class="help-dot" data-help="boost">?</span></button>
+            <button class="card-button" data-card="repair" type="button">修復 <b id="cardRepair">0</b><span class="help-dot" data-help="repair">?</span></button>
+            <button class="card-button" data-card="shield" type="button">防護 <b id="cardShield">0</b><span class="help-dot" data-help="shield">?</span></button>
+            <button class="card-button" data-card="steal" type="button">偷錢 <b id="cardSteal">0</b><span class="help-dot" data-help="steal">?</span></button>
+            <button class="card-button" data-card="freeze" type="button">干擾 <b id="cardFreeze">0</b><span class="help-dot" data-help="freeze">?</span></button>
+            <button class="card-button" data-card="rent" type="button">收租 <b id="cardRent">0</b><span class="help-dot" data-help="rent">?</span></button>
+            <button class="card-button" data-card="flag" type="button">奪旗 <b id="cardFlag">0</b><span class="help-dot" data-help="flag">?</span></button>
+          </div>
+          <div class="shop-grid">
+            <button class="shop-button" data-item="boost" type="button">買重擊<br><small>8 金幣</small></button>
+            <button class="shop-button" data-item="repair" type="button">買修復<br><small>5 金幣</small></button>
+            <button class="shop-button" data-item="shield" type="button">買防護<br><small>6 金幣</small></button>
+            <button class="shop-button" data-item="steal" type="button">買偷錢<br><small>7 金幣</small></button>
+            <button class="shop-button" data-item="freeze" type="button">買干擾<br><small>6 金幣</small></button>
+            <button class="shop-button" data-item="rent" type="button">買收租<br><small>9 金幣</small></button>
+            <button class="shop-button" data-item="pack" type="button">抽卡包<br><small>6 金幣</small></button>
+          </div>
+          <label class="field-label" for="opponentSelect">選擇同學</label>
+          <div class="raid-row">
+            <select id="opponentSelect" class="opponent-select"></select>
+            <button id="raidButton" class="danger-button" type="button">突襲 10</button>
+          </div>
+          <small id="shopHint">連勝 3 題加金幣，5 題會重擊，10 連勝有補給。</small>
+        </section>
+
+        <section id="questionCard" class="question-card" hidden>
+          <div class="question-topline">
+            <span id="questionCount">Question</span>
+            <button id="speakButton" class="icon-button" type="button" title="播放英文">▶</button>
+          </div>
+          <h3 id="englishText"></h3>
+          <div id="options" class="options"></div>
+        </section>
+
+        <section id="recordCard" class="record-card" hidden>
+          <p>請唸出：</p>
+          <strong id="recordPrompt"></strong>
+          <div class="record-actions">
+            <button id="recordButton" class="danger-button" type="button">開始錄音</button>
+            <button id="playRecordButton" class="soft-button" type="button" disabled>播放</button>
+          </div>
+          <button id="submitButton" class="primary-button" type="button" disabled>送出攻擊</button>
+          <small id="recordHint">答對後錄音，老師之後可以抽聽。</small>
+        </section>
+
+        <div id="resultBox" class="result-box"></div>
+        <section class="leaderboard-card">
+          <div class="question-topline">
+            <span>Top 5 排行榜</span>
+            <strong>即時</strong>
+          </div>
+          <div id="leaderboardList" class="leaderboard-list"></div>
+        </section>
+        <button id="nextButton" class="secondary-button" type="button" hidden>下一題</button>
+      </aside>
+    </section>
+
+    <footer class="activity-bar">
+      <div class="activity-title">戰況</div>
+      <div id="events" class="events"></div>
+    </footer>
+  </main>
+
+  <div id="rewardModal" class="reward-modal" hidden>
+    <section class="reward-card">
+      <p id="rewardKicker">獎勵</p>
+      <h2 id="rewardTitle">攻擊成功</h2>
+      <div id="rewardBody" class="reward-body"></div>
+      <button id="rewardCloseButton" class="primary-button" type="button">繼續</button>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
