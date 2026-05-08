@@ -177,9 +177,8 @@ function renderMap() {
       class: isRoom ? 'zone-label room-label' : isRoad ? 'zone-label road-label' : 'zone-label',
     }, name));
 
-    const total = (territory.progress?.['502'] || 0) + (territory.progress?.['503'] || 0);
-    const share502 = total ? Math.round(((territory.progress?.['502'] || 0) / total) * 100) : 0;
-    const share503 = total ? 100 - share502 : 0;
+    const share502 = territory.maxHp ? Math.round(((territory.progress?.['502'] || 0) / territory.maxHp) * 100) : 0;
+    const share503 = territory.maxHp ? Math.round(((territory.progress?.['503'] || 0) / territory.maxHp) * 100) : 0;
     const sub = ownerClass
       ? `${ownerClass} ${territory.ownerStudentName || ''}`
       : `502 ${share502}% · 503 ${share503}%`;
@@ -203,9 +202,8 @@ function renderProgress(svg, territory, zone) {
     fill: 'rgba(15, 23, 42, 0.55)',
   }));
 
-  const total = (territory.progress?.['502'] || 0) + (territory.progress?.['503'] || 0);
-  const p502 = total ? Math.max(0, ((territory.progress['502'] || 0) / total) * barWidth) : 0;
-  const p503 = total ? Math.max(0, ((territory.progress['503'] || 0) / total) * barWidth) : 0;
+  const p502 = Math.max(0, ((territory.progress['502'] || 0) / territory.maxHp) * barWidth);
+  const p503 = Math.max(0, ((territory.progress['503'] || 0) / territory.maxHp) * barWidth);
   svg.appendChild(svgEl('rect', {
     x: zone.x + 8,
     y: barY,

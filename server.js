@@ -18,6 +18,8 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_STATE_ID = process.env.SUPABASE_STATE_ID || 'main';
 
 const CLASSES = ['502', '503'];
+const CLAIM_THRESHOLD = 8;
+const TAKEOVER_MARGIN = 4;
 const CLASS_COLORS = {
   '502': '#2563eb',
   '503': '#dc2626',
@@ -556,10 +558,22 @@ function refreshTerritoryLeader(terr, students = gameData.students) {
   const p502 = Math.max(0, terr.progress?.['502'] || 0);
   const p503 = Math.max(0, terr.progress?.['503'] || 0);
   terr.progress = { '502': p502, '503': p503 };
-  let ownerClass = null;
-  if (p502 > p503) ownerClass = '502';
-  if (p503 > p502) ownerClass = '503';
-  if (p502 === p503 && p502 > 0 && ['502', '503'].includes(terr.ownerClass)) ownerClass = terr.ownerClass;
+  const currentOwner = ['502', '503'].includes(terr.ownerClass) ? terr.ownerClass : '';
+  const leaderClass = p502 > p503 ? '502' : p503 > p502 ? '503' : '';
+  let ownerClass = currentOwner;
+
+  if (!ownerClass) {
+    ownerClass = leaderClass && terr.progress[leaderClass] >= CLAIM_THRESHOLD ? leaderClass : null;
+  } else {
+    const challenger = otherClass(ownerClass);
+    const ownerProgress = terr.progress[ownerClass] || 0;
+    const challengerProgress = terr.progress[challenger] || 0;
+    if (ownerProgress < CLAIM_THRESHOLD && challengerProgress < CLAIM_THRESHOLD) {
+      ownerClass = null;
+    } else if (challengerProgress >= CLAIM_THRESHOLD && challengerProgress >= ownerProgress + TAKEOVER_MARGIN) {
+      ownerClass = challenger;
+    }
+  }
 
   terr.ownerClass = ownerClass;
   if (!ownerClass) {
@@ -576,12 +590,8 @@ function refreshTerritoryLeader(terr, students = gameData.students) {
 
 function addTerritoryContribution(terr, student, amount) {
   const classNum = student.classNum;
-  const enemy = otherClass(classNum);
   const gain = Math.max(0, amount);
   terr.progress[classNum] = Math.min(terr.maxHp, (terr.progress[classNum] || 0) + gain);
-  if (enemy) {
-    terr.progress[enemy] = Math.max(0, (terr.progress[enemy] || 0) - Math.ceil(gain / 2));
-  }
   terr.contributors = terr.contributors || {};
   terr.contributors[student.id] = Math.min(999, (terr.contributors[student.id] || 0) + gain);
   refreshTerritoryLeader(terr);
@@ -780,11 +790,8 @@ function otherClass(classNum) {
 }
 
 function territoryShare(terr, classNum) {
-  const p502 = Math.max(0, terr.progress?.['502'] || 0);
-  const p503 = Math.max(0, terr.progress?.['503'] || 0);
-  const total = p502 + p503;
-  if (!total) return 0;
-  return Math.round(((terr.progress?.[classNum] || 0) / total) * 100);
+  if (!terr.maxHp) return 0;
+  return Math.round(((terr.progress?.[classNum] || 0) / terr.maxHp) * 100);
 }
 
 function pushEvent(text, type = 'info') {
