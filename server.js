@@ -184,6 +184,55 @@ function buildPhonicsQuestions() {
     addListeningSet(prefix, options, '聽單字，選出你聽到的單字。');
   });
 
+  addListeningSet('ph-past-letter-n-', ['a', 'n', 'm'], '聽音，選出正確字母。');
+  addListeningSet('ph-past-letter-g-', ['t', 'k', 'g'], '聽音，選出正確字母。');
+
+  [
+    ['ph-past-short-i-tip-', ['tip', 'top', 'tap', 'sip']],
+    ['ph-past-short-a-max-', ['mess', 'mash', 'max', 'mat']],
+    ['ph-past-long-e-read-', ['read', 'ride', 'rude', 'red']],
+    ['ph-past-short-e-get-', ['cat', 'lot', 'get', 'pet']],
+    ['ph-past-fill-feel-', ['fear', 'fill', 'feel', 'fall']],
+    ['ph-past-smile-', ['smile', 'small', 'smell', 'smooth']],
+    ['ph-past-short-o-jog-', ['hug', 'jag', 'jog', 'mug']],
+    ['ph-past-aw-call-', ['core', 'call', 'cool', 'cold']],
+    ['ph-past-short-u-run-', ['rain', 'run', 'ran', 'room']],
+    ['ph-past-short-a-dam-', ['bang', 'tame', 'dam', 'pen']],
+    ['ph-past-oll-doll-', ['tall', 'wall', 'ball', 'doll']],
+    ['ph-past-chase-', ['phase', 'chase', 'shoes', 'fare']],
+    ['ph-past-phil-', ['pill', 'Phil', 'hill', 'wheel']],
+    ['ph-past-bait-', ['bait', 'bake', 'bad', 'date']],
+    ['ph-past-cheer-', ['cheer', 'there', 'share', 'where']],
+    ['ph-past-trick-', ['drink', 'Derek', 'trick', 'truck']],
+    ['ph-past-thursday-', ['Tuesday', 'Thursday', 'thirsty', 'thirty']],
+    ['ph-past-white-', ['white', 'write', 'ride', 'right']],
+    ['ph-past-bedroom-', ['bathroom', 'bedroom', 'balloon', 'bamboo']],
+    ['ph-past-number-90-', ['nine', 'nineteen', 'ninety', 'night']],
+  ].forEach(([prefix, options]) => {
+    addListeningSet(prefix, options, '聽單字，選出你聽到的相近字。');
+  });
+
+  [
+    ['ph-similar-teen-ty-01-', [['13', 'thirteen'], ['30', 'thirty'], ['14', 'fourteen'], ['40', 'forty']]],
+    ['ph-similar-teen-ty-02-', [['15', 'fifteen'], ['50', 'fifty'], ['18', 'eighteen'], ['80', 'eighty']]],
+    ['ph-similar-teen-ty-03-', [['19', 'nineteen'], ['90', 'ninety'], ['16', 'sixteen'], ['60', 'sixty']]],
+  ].forEach(([prefix, pairs]) => {
+    const options = pairs.map(([answer]) => answer);
+    pairs.forEach(([answer, speak], index) => {
+      questions.push({
+        id: `${prefix}${String(index + 1).padStart(2, '0')}`,
+        en: speak,
+        zh: answer,
+        speak,
+        prompt: '聽數字，分辨 -teen 和 -ty。',
+        options,
+        mode: 'listening',
+        level: 'phonics',
+        levelName: phonicsLevelName,
+      });
+    });
+  });
+
   [
     ['ph-spell-01', 'stomach', ['stomack', 'stomatch', 'stomach', 'stomech']],
     ['ph-spell-02', 'Tuesday', ['Tuseday', 'Tusday', 'Thursday', 'Tuesday']],
