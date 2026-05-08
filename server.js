@@ -124,57 +124,37 @@ const ROLES = {
   guardian: { id: 'guardian', name: '守衛', short: '佔領帶防護' },
 };
 
-const ROAD_TERRITORIES = ['北門道路', '東門道路', '南門道路', '西門道路', '維仁路30巷', '柳橋東路'];
+const ROAD_TERRITORIES = [];
 
 const LINE_BONUSES = [
   {
-    id: 'outer-ring',
-    name: '外環道路封鎖',
-    territories: ['北門道路', '東門道路', '南門道路', '西門道路'],
-    effect: '佔滿四周道路：突襲費用 -1，答對金幣 +1',
-    attack: 0,
-    coins: 1,
-    score: 0,
-    raidDiscount: 1,
-  },
-  {
-    id: 'a-first-row',
-    name: 'A棟一樓連線',
-    territories: ['A101', 'A102', 'A103', 'A104', 'A105', 'A106', 'A107', 'A108'],
-    effect: '佔滿 A101-A108：答對攻擊 +1',
-    attack: 1,
-    coins: 0,
-    score: 0,
-    raidDiscount: 0,
-  },
-  {
-    id: 'a-second-row',
-    name: 'A棟二樓連線',
-    territories: ['A201', 'A202', 'A203', 'A204', 'A205', 'A206', 'A207', 'A208', 'A209', 'A210', 'A211'],
-    effect: '佔滿 A201-A211：答對金幣 +2',
+    id: 'main-buildings',
+    name: '教學主線',
+    territories: ['A棟', 'B棟', 'C棟'],
+    effect: '佔滿 A棟、B棟、C棟：答對金幣 +2',
     attack: 0,
     coins: 2,
     score: 0,
     raidDiscount: 0,
   },
   {
-    id: 'c-column',
-    name: '西棟直線',
-    territories: ['C301', 'C302', 'C303', 'C304', 'C305', 'C306'],
-    effect: '佔滿 C301-C306：每題分數 +3',
-    attack: 0,
-    coins: 0,
-    score: 3,
-    raidDiscount: 0,
-  },
-  {
-    id: 'd-north-row',
-    name: '北棟高地',
-    territories: ['D401', 'D402', 'D403', 'D404', 'D405', 'D406'],
-    effect: '佔滿 D401-D406：答對攻擊 +1',
+    id: 'north-buildings',
+    name: '北棟防線',
+    territories: ['後北棟', '前北棟'],
+    effect: '佔滿後北棟、前北棟：答對攻擊 +1',
     attack: 1,
     coins: 0,
     score: 0,
+    raidDiscount: 0,
+  },
+  {
+    id: 'sports-zone',
+    name: '運動核心',
+    territories: ['操場', '籃球場'],
+    effect: '佔滿操場、籃球場：每題分數 +3',
+    attack: 1,
+    coins: 0,
+    score: 3,
     raidDiscount: 0,
   },
 ];
@@ -486,29 +466,15 @@ function allQuestions() {
 
 function buildTerritories() {
   const names = [
-    'A001', 'A002', 'A101', 'A102', 'A103', 'A104', 'A105', 'A106', 'A107', 'A108',
-    'A201', 'A202', 'A203', 'A204', 'A205', 'A206', 'A207', 'A208', 'A209', 'A210', 'A211',
-    'A301', 'A302', 'A303', 'A304', 'A305', 'A306', 'A307', 'A308', 'A309', 'A310', 'A311',
-    'A401', 'A402', 'A403',
-    'B101', 'B102', 'B103', 'B104', 'B105', 'B201', 'B202', 'B203', 'B204', 'B205', 'B206',
-    'B301', 'B302', 'B401', 'B402', 'B403', 'B404', 'B405', 'B406', 'B407',
-    'C101', 'C102', 'C103', 'C104', 'C105', 'C106', 'C201', 'C202', 'C203', 'C204',
-    'C301', 'C302', 'C303', 'C304', 'C305', 'C306',
-    'D101', 'D102', 'D103', 'D104', 'D105', 'D106', 'D107', 'D108',
-    'D201', 'D202', 'D203', 'D204', 'D205', 'D206', 'D207', 'D208', 'D209', 'D210',
-    'D301', 'D302', 'D303', 'D304', 'D305', 'D306', 'D307', 'D308', 'D309', 'D310',
-    'D401', 'D402', 'D403', 'D404', 'D405', 'D406',
+    'A棟', 'B棟', 'C棟', '後北棟', '前北棟',
     '操場', '籃球場', '活動中心', '廚房',
-    '北門道路', '東門道路', '南門道路', '西門道路', '維仁路30巷', '柳橋東路',
   ];
   return names.map(name => ({
     name,
-    maxHp: ['操場', '活動中心'].includes(name) ? 26 : ['籃球場', '廚房'].includes(name) ? 16 : ROAD_TERRITORIES.includes(name) ? 12 : 8,
-    power: name.match(/^[ABCD]/)
-      ? '教室據點。攻下後會留下守擂學生名字。'
-      : ROAD_TERRITORIES.includes(name)
-      ? '道路據點。佔滿四周道路可啟動外環封鎖。'
-      : '大型據點，需要更多人合作，效果比一般教室強。',
+    maxHp: ['操場', '活動中心'].includes(name) ? 34 : ['籃球場', '廚房'].includes(name) ? 24 : 30,
+    power: ['A棟', 'B棟', 'C棟', '後北棟', '前北棟'].includes(name)
+      ? '樓棟據點。攻下後會顯示守擂學生名字。'
+      : '大型據點，需要更多人合作，效果比一般樓棟強。',
   }));
 }
 
@@ -609,6 +575,9 @@ function normalizeLoadedData(data) {
       shieldUntil: old.shieldUntil || 0,
       power: terr.power,
     };
+  });
+  Object.keys(data.territories).forEach(name => {
+    if (!fresh.territories[name]) delete data.territories[name];
   });
 
   Object.values(data.students).forEach(s => {
