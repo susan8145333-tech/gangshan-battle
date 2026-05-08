@@ -558,6 +558,7 @@ function renderHtmlMapOverlay() {
     const territory = state.data.territories[name];
     if (!territory) return '';
     const ownerClass = territory.ownerClass || '';
+    const isRoom = /^[ABCD]\d/.test(name);
     const isRoad = ROAD_TERRITORIES.includes(name);
     const isMega = MEGA_TERRITORIES.includes(name);
     const isMine = territory.ownerStudentId === state.student?.id;
@@ -566,19 +567,25 @@ function renderHtmlMapOverlay() {
     const top = (zone.y / 888) * 100;
     const width = (zone.w / 1243) * 100;
     const height = (zone.h / 888) * 100;
-    const meta = ownerClass
-      ? `${ownerClass} ${territory.ownerStudentName || ''}`.trim()
-      : `${territory.progress['502']}/${territory.maxHp} · ${territory.progress['503']}/${territory.maxHp}`;
+    const ownerMeta = ownerClass ? `${ownerClass} ${territory.ownerStudentName || ''}`.trim() : '';
+    const progressMeta = ownerClass
+      ? ownerClass === state.student?.classNum
+        ? `血量 ${territory.hp}/${territory.maxHp}`
+        : `攻破 ${territory.maxHp - territory.hp}/${territory.maxHp}`
+      : `502 ${territory.progress['502']}/${territory.maxHp}｜503 ${territory.progress['503']}/${territory.maxHp}`;
+    const showOwner = Boolean(ownerMeta);
+    const showProgress = selected || isMega || isRoad;
     return `
       <button
-        class="map-zone-card ${isRoad ? 'road-card' : ''} ${isMega ? 'mega-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''} ${isMine ? 'mine' : ''} ${selected ? 'selected' : ''}"
+        class="map-zone-card ${isRoom ? 'room-card' : ''} ${isRoad ? 'road-card' : ''} ${isMega ? 'mega-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''} ${isMine ? 'mine' : ''} ${selected ? 'selected' : ''}"
         style="left:${left}%;top:${top}%;width:${width}%;height:${height}%;"
         type="button"
         data-map-zone="${escapeHtml(name)}"
         title="${escapeHtml(name)}"
       >
         <span>${escapeHtml(name)}</span>
-        <small>${escapeHtml(meta)}</small>
+        ${showOwner ? `<small>${escapeHtml(ownerMeta)}</small>` : ''}
+        ${showProgress ? `<small class="zone-status">${escapeHtml(progressMeta)}</small>` : ''}
       </button>`;
   }).join('');
   overlay.querySelectorAll('[data-map-zone]').forEach(button => {
@@ -670,7 +677,10 @@ function renderTargetInfo() {
   }
 
   if (territory.ownerClass) {
-    owner.textContent = `目前：${territory.ownerClass} ${territory.ownerStudentName || ''} 守擂中 · 血量 ${territory.hp}/${territory.maxHp}`;
+    const attackProgress = territory.ownerClass === state.student?.classNum
+      ? `己方血量 ${territory.hp}/${territory.maxHp}`
+      : `你方攻破進度 ${territory.maxHp - territory.hp}/${territory.maxHp}`;
+    owner.textContent = `目前：${territory.ownerClass} ${territory.ownerStudentName || ''} 守擂中 · ${attackProgress}`;
     owner.className = `target-owner owner-${territory.ownerClass}`;
   } else {
     owner.textContent = `尚未佔領 · 502 ${territory.progress['502']}/${territory.maxHp} · 503 ${territory.progress['503']}/${territory.maxHp}`;
@@ -760,7 +770,7 @@ function startQuestion() {
   $('#questionCount').textContent = `第 ${state.questionNumber} 題`;
   $('#englishText').textContent = usesPrompt ? (q.prompt || '選出正確答案。') : q.en;
   $('#recordPrompt').textContent = isListening ? '' : (q.recordText || `${q.en} ${q.zh}`);
-  setResult(isListening ? '先聽聲音，再選出正確答案。' : '選出正確答案，答對後再錄音。');
+  setResult(isListening ? '按 ▶ 播放聲音。若平板沒有聲音，請先確認音量/靜音，仍無聲可請老師唸題。' : '選出正確答案，答對後再錄音。');
 
   let options = Array.isArray(q.options) && q.options.length
     ? q.options
@@ -942,8 +952,8 @@ function stopSpeechCheck() {
 function updateSpeechGate() {
   const recordedMs = Date.now() - state.recordStartAt;
   if (recordedMs < 900) {
-    $('#submitButton').disabled = true;
-    $('#recordHint').textContent = '錄音太短了，請重新錄一次。';
+    $('#submitButton').disabled = false;
+    $('#recordHint').textContent = '已錄到聲音，可以送出。老師之後可抽聽。';
     return;
   }
 
@@ -954,14 +964,8 @@ function updateSpeechGate() {
   }
 
   const percent = Math.round(state.speechScore * 100);
-  const threshold = speechThreshold(state.currentQuestion?.recordText || state.currentQuestion?.en || '');
-  if (state.speechScore >= threshold) {
-    $('#submitButton').disabled = false;
-    $('#recordHint').textContent = `英文辨識通過 ${percent}%。可以送出攻擊。`;
-  } else {
-    $('#submitButton').disabled = true;
-    $('#recordHint').textContent = `英文關鍵字不足（${percent}%）。請慢一點再錄一次。`;
-  }
+  $('#submitButton').disabled = false;
+  $('#recordHint').textContent = `已錄音，可以送出。辨識參考 ${percent}%，不再卡關。`;
 }
 
 function speechThreshold(expected) {

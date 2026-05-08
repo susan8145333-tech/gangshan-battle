@@ -341,8 +341,10 @@ h1 {
 .map-shell {
   position: relative;
   flex: 1;
-  height: min(68vh, 720px);
-  min-height: 420px;
+  aspect-ratio: 1243 / 888;
+  height: auto;
+  min-height: 0;
+  max-height: calc(100vh - 190px);
   overflow: hidden;
   border: 1px solid rgba(99, 102, 241, 0.28);
   border-radius: 8px;
@@ -395,7 +397,7 @@ h1 {
   background: rgba(71, 85, 105, 0.42);
   color: #fff;
   font: inherit;
-  font-size: 9px;
+  font-size: clamp(10px, 0.95vw, 14px);
   font-weight: 900;
   line-height: 1;
   text-align: center;
@@ -433,12 +435,16 @@ h1 {
 .map-zone-card.road-card {
   border-style: dashed;
   background: rgba(30, 41, 59, 0.58);
-  font-size: 11px;
+  font-size: clamp(12px, 1.08vw, 16px);
 }
 
 .map-zone-card.mega-card {
   background: rgba(20, 83, 45, 0.48);
-  font-size: 15px;
+  font-size: clamp(16px, 1.45vw, 22px);
+}
+
+.map-zone-card.room-card {
+  font-size: clamp(9px, 0.82vw, 12px);
 }
 
 .map-zone-card small {
@@ -447,7 +453,7 @@ h1 {
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.58);
   color: #fff;
-  font-size: 7px;
+  font-size: clamp(8px, 0.72vw, 11px);
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
@@ -455,11 +461,22 @@ h1 {
 }
 
 .map-zone-card.road-card small {
-  font-size: 8px;
+  font-size: clamp(9px, 0.85vw, 12px);
 }
 
 .map-zone-card.mega-card small {
-  font-size: 10px;
+  font-size: clamp(11px, 1vw, 14px);
+}
+
+.map-zone-card .zone-status {
+  background: rgba(255, 255, 255, 0.9);
+  color: #13233f;
+}
+
+.map-zone-card.owner-502 .zone-status,
+.map-zone-card.owner-503 .zone-status {
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
 }
 
 .map-shell::after {
@@ -1464,7 +1481,7 @@ th {
   }
 
   .map-shell {
-    min-height: 48vh;
+    max-height: none;
   }
 
   .play-panel {
