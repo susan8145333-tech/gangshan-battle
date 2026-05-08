@@ -51,6 +51,22 @@ const state = {
 const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
 
+async function apiFetch(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function connectionErrorText() {
+  return location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? '本機測試伺服器沒有回應。請改開線上網址：https://gangshan-battle.onrender.com/'
+    : '連線逾時，請確認網路後再送出一次。';
+}
+
 function soundContext() {
   if (!state.audioCtx) {
     const AudioCtor = window.AudioContext || window.webkitAudioContext;
@@ -794,20 +810,31 @@ function chooseAnswer(chosen, button) {
 }
 
 async function submitAnswer(chosenZh, hasRecording = false) {
-  const res = await fetch('/api/answer', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      studentId: state.student.id,
-      questionId: state.currentQuestion.id,
-      chosenZh,
-      territoryName: state.target,
-      hasRecording,
-    }),
-  });
-  const payload = await res.json();
+  let res;
+  let payload;
+  try {
+    res = await apiFetch('/api/answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentId: state.student.id,
+        questionId: state.currentQuestion.id,
+        chosenZh,
+        territoryName: state.target,
+        hasRecording,
+      }),
+    });
+    payload = await res.json();
+  } catch (err) {
+    setResult(connectionErrorText(), 'bad');
+    $('#submitButton').disabled = false;
+    $('#submitButton').textContent = '送出攻擊';
+    return null;
+  }
   if (!res.ok) {
     setResult(payload.error || '送出失敗。', 'bad');
+    $('#submitButton').disabled = false;
+    $('#submitButton').textContent = '送出攻擊';
     return null;
   }
   state.student = payload.student;
@@ -982,19 +1009,27 @@ async function submitRecordedAttack() {
   $('#submitButton').textContent = '送出中...';
 
   let uploaded = false;
-  if (state.recordBlob) {
-    await fetch(`/api/student-audio/${encodeURIComponent(state.student.id)}/${state.currentQuestion.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': state.recordBlob.type },
-      body: state.recordBlob,
-    });
-    uploaded = true;
-  }
+  try {
+    if (state.recordBlob) {
+      const uploadRes = await apiFetch(`/api/student-audio/${encodeURIComponent(state.student.id)}/${state.currentQuestion.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': state.recordBlob.type },
+        body: state.recordBlob,
+      }, 12000);
+      uploaded = uploadRes.ok;
+    }
 
-  await submitAnswer(state.currentQuestion.zh, uploaded);
-  $('#recordCard').hidden = true;
-  $('#nextButton').hidden = false;
-  $('#submitButton').textContent = '送出攻擊';
+    const payload = await submitAnswer(state.currentQuestion.zh, uploaded);
+    if (!payload) return;
+    $('#recordCard').hidden = true;
+    $('#nextButton').hidden = false;
+  } catch (err) {
+    setResult(connectionErrorText(), 'bad');
+    $('#recordHint').textContent = connectionErrorText();
+  } finally {
+    $('#submitButton').disabled = false;
+    $('#submitButton').textContent = '送出攻擊';
+  }
 }
 
 function resetRecording() {
