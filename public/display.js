@@ -1,5 +1,7 @@
 const ZONES = buildZones();
 const CLASS_COLORS = { '502': '#2563eb', '503': '#dc2626' };
+const ROAD_TERRITORIES = ['北門道路', '東門道路', '南門道路', '西門道路', '維仁路30巷', '柳橋東路'];
+const MEGA_TERRITORIES = ['操場', '籃球場', '活動中心', '廚房'];
 let data = null;
 
 const $ = selector => document.querySelector(selector);
@@ -37,6 +39,12 @@ function buildZones() {
   add('籃球場', 238, 395, 100, 150);
   add('活動中心', 1065, 285, 92, 230);
   add('廚房', 900, 180, 126, 104);
+  add('北門道路', 585, 112, 300, 44);
+  add('東門道路', 1154, 470, 48, 255);
+  add('南門道路', 740, 806, 380, 44);
+  add('西門道路', 35, 255, 48, 510);
+  add('維仁路30巷', 210, 112, 370, 44);
+  add('柳橋東路', 210, 806, 520, 44);
   return zones;
 }
 
@@ -94,20 +102,23 @@ function renderMap() {
     const territory = data.territories?.[name];
     if (!territory) return;
     const ownerClass = territory.ownerClass;
+    const isRoad = ROAD_TERRITORIES.includes(name);
+    const isMega = MEGA_TERRITORIES.includes(name);
     const fill = ownerClass ? CLASS_COLORS[ownerClass] : '#475569';
     svg.appendChild(svgEl('rect', {
       x: zone.x, y: zone.y, width: zone.w, height: zone.h, rx: 8,
-      fill, 'fill-opacity': ownerClass ? 0.56 : 0.12,
-      stroke: fill, 'stroke-width': ownerClass ? 3 : 1.5,
+      fill, 'fill-opacity': ownerClass ? 0.6 : isRoad ? 0.36 : isMega ? 0.3 : 0.22,
+      stroke: fill, 'stroke-width': ownerClass ? 3 : isRoad || isMega ? 2.5 : 1.5,
+      class: `zone ${isRoad ? 'road-zone' : ''} ${isMega ? 'mega-zone' : ''}`,
     }));
     svg.appendChild(svgEl('text', {
       x: zone.cx, y: /^[ABCD]\d/.test(name) ? zone.cy : zone.cy - 10,
-      class: /^[ABCD]\d/.test(name) ? 'room-label zone-label' : 'zone-label',
+      class: /^[ABCD]\d/.test(name) ? 'room-label zone-label' : isRoad ? 'road-label zone-label' : 'zone-label',
     }, name));
     if (ownerClass) {
       svg.appendChild(svgEl('text', {
         x: zone.cx, y: /^[ABCD]\d/.test(name) ? zone.cy + 11 : zone.cy + 15,
-        class: /^[ABCD]\d/.test(name) ? 'room-sub zone-sub' : 'zone-sub',
+        class: /^[ABCD]\d/.test(name) ? 'room-sub zone-sub' : isRoad ? 'road-sub zone-sub' : 'zone-sub',
       }, `${ownerClass} ${territory.ownerStudentName || ''}`.slice(0, 13)));
     }
   });
@@ -115,11 +126,11 @@ function renderMap() {
 
 function renderPowers() {
   $('#displayPowers').innerHTML = (data.territoryPowers || []).map(power => {
-    const owner = data.territories?.[power.name]?.ownerClass;
+    const owner = power.activeClass || data.territories?.[power.name]?.ownerClass;
     return `
       <div class="power-row ${owner ? `owner-${owner}` : ''}">
         <strong>${escapeHtml(power.name)}</strong>
-        <span>${owner ? `${owner} 啟動` : '待爭奪'}</span>
+        <span>${owner ? `${owner} 啟動` : power.type === 'line' ? '待連線' : '待爭奪'}</span>
         <small>${escapeHtml(power.effect)}</small>
       </div>`;
   }).join('');

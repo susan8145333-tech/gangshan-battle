@@ -1,4 +1,6 @@
 const ZONES = buildZones();
+const ROAD_TERRITORIES = ['北門道路', '東門道路', '南門道路', '西門道路', '維仁路30巷', '柳橋東路'];
+const MEGA_TERRITORIES = ['操場', '籃球場', '活動中心', '廚房'];
 
 function buildZones() {
   const zones = {};
@@ -37,6 +39,12 @@ function buildZones() {
   add('籃球場', 238, 395, 100, 150);
   add('活動中心', 1065, 285, 92, 230);
   add('廚房', 900, 180, 126, 104);
+  add('北門道路', 585, 112, 300, 44);
+  add('東門道路', 1154, 470, 48, 255);
+  add('南門道路', 740, 806, 380, 44);
+  add('西門道路', 35, 255, 48, 510);
+  add('維仁路30巷', 210, 112, 370, 44);
+  add('柳橋東路', 210, 806, 520, 44);
   return zones;
 }
 
@@ -87,6 +95,8 @@ function renderMap() {
     if (!territory) return;
     const ownerClass = territory?.ownerClass;
     const isRoom = /^[ABCD]\d/.test(name);
+    const isRoad = ROAD_TERRITORIES.includes(name);
+    const isMega = MEGA_TERRITORIES.includes(name);
     const fill = ownerClass ? CLASS_COLORS[ownerClass] : '#475569';
 
     svg.appendChild(svgEl('rect', {
@@ -96,16 +106,17 @@ function renderMap() {
       height: zone.h,
       rx: 8,
       fill,
-      'fill-opacity': ownerClass ? 0.5 : 0.2,
+      'fill-opacity': ownerClass ? 0.56 : isRoad ? 0.38 : isMega ? 0.32 : 0.26,
       stroke: fill,
-      'stroke-width': 2,
+      'stroke-width': isRoad || isMega ? 3 : 2,
+      class: `zone ${isRoad ? 'road-zone' : ''} ${isMega ? 'mega-zone' : ''}`,
     }));
 
     renderProgress(svg, territory, zone);
     svg.appendChild(svgEl('text', {
       x: zone.cx,
       y: isRoom ? zone.cy - 3 : zone.cy - 10,
-      class: isRoom ? 'zone-label room-label' : 'zone-label',
+      class: isRoom ? 'zone-label room-label' : isRoad ? 'zone-label road-label' : 'zone-label',
     }, name));
 
     const sub = ownerClass
@@ -114,7 +125,7 @@ function renderMap() {
     svg.appendChild(svgEl('text', {
       x: zone.cx,
       y: isRoom ? zone.cy + 10 : zone.cy + 14,
-      class: isRoom ? 'zone-sub room-sub' : 'zone-sub',
+      class: isRoom ? 'zone-sub room-sub' : isRoad ? 'zone-sub road-sub' : 'zone-sub',
     }, isRoom && sub.length > 12 ? `${sub.slice(0, 12)}` : sub));
   });
 }
@@ -269,7 +280,13 @@ function getLevelInfo(student) {
 function attackPower(student) {
   const level = getLevelInfo(student);
   const levelBonus = level.currentLevel === 'final' ? 3 : level.currentLevel === 'phonics' ? 2 : level.currentLevel === 'festival' ? 1 : 0;
-  return 1 + levelBonus + (student.powerUps?.boost || 0);
+  return 1 + levelBonus + lineBonusAttack(student.classNum) + (student.powerUps?.boost || 0);
+}
+
+function lineBonusAttack(classNum) {
+  return (data?.territoryPowers || [])
+    .filter(power => power.type === 'line' && power.activeClass === classNum && (power.effect || '').includes('攻擊 +1'))
+    .length;
 }
 
 function renderQuestions() {

@@ -121,6 +121,61 @@ const ROLES = {
   guardian: { id: 'guardian', name: '守衛', short: '佔領帶防護' },
 };
 
+const ROAD_TERRITORIES = ['北門道路', '東門道路', '南門道路', '西門道路', '維仁路30巷', '柳橋東路'];
+
+const LINE_BONUSES = [
+  {
+    id: 'outer-ring',
+    name: '外環道路封鎖',
+    territories: ['北門道路', '東門道路', '南門道路', '西門道路'],
+    effect: '佔滿四周道路：突襲費用 -1，答對金幣 +1',
+    attack: 0,
+    coins: 1,
+    score: 0,
+    raidDiscount: 1,
+  },
+  {
+    id: 'a-first-row',
+    name: 'A棟一樓連線',
+    territories: ['A101', 'A102', 'A103', 'A104', 'A105', 'A106', 'A107', 'A108'],
+    effect: '佔滿 A101-A108：答對攻擊 +1',
+    attack: 1,
+    coins: 0,
+    score: 0,
+    raidDiscount: 0,
+  },
+  {
+    id: 'a-second-row',
+    name: 'A棟二樓連線',
+    territories: ['A201', 'A202', 'A203', 'A204', 'A205', 'A206', 'A207', 'A208', 'A209', 'A210', 'A211'],
+    effect: '佔滿 A201-A211：答對金幣 +2',
+    attack: 0,
+    coins: 2,
+    score: 0,
+    raidDiscount: 0,
+  },
+  {
+    id: 'c-column',
+    name: '西棟直線',
+    territories: ['C301', 'C302', 'C303', 'C304', 'C305', 'C306'],
+    effect: '佔滿 C301-C306：每題分數 +3',
+    attack: 0,
+    coins: 0,
+    score: 3,
+    raidDiscount: 0,
+  },
+  {
+    id: 'd-north-row',
+    name: '北棟高地',
+    territories: ['D401', 'D402', 'D403', 'D404', 'D405', 'D406'],
+    effect: '佔滿 D401-D406：答對攻擊 +1',
+    attack: 1,
+    coins: 0,
+    score: 0,
+    raidDiscount: 0,
+  },
+];
+
 const TERRITORIES = buildTerritories();
 
 function levelName(level) {
@@ -441,13 +496,16 @@ function buildTerritories() {
     'D301', 'D302', 'D303', 'D304', 'D305', 'D306', 'D307', 'D308', 'D309', 'D310',
     'D401', 'D402', 'D403', 'D404', 'D405', 'D406',
     '操場', '籃球場', '活動中心', '廚房',
+    '北門道路', '東門道路', '南門道路', '西門道路', '維仁路30巷', '柳橋東路',
   ];
   return names.map(name => ({
     name,
-    maxHp: ['操場', '活動中心'].includes(name) ? 24 : ['籃球場', '廚房'].includes(name) ? 14 : 8,
+    maxHp: ['操場', '活動中心'].includes(name) ? 26 : ['籃球場', '廚房'].includes(name) ? 16 : ROAD_TERRITORIES.includes(name) ? 12 : 8,
     power: name.match(/^[ABCD]/)
       ? '教室據點。攻下後會留下守擂學生名字。'
-      : '大型據點，需要更多人合作。',
+      : ROAD_TERRITORIES.includes(name)
+      ? '道路據點。佔滿四周道路可啟動外環封鎖。'
+      : '大型據點，需要更多人合作，效果比一般教室強。',
   }));
 }
 
@@ -627,13 +685,31 @@ function classOwns(classNum, territoryName) {
   return gameData.territories[territoryName]?.ownerClass === classNum;
 }
 
+function activeLineBonuses(classNum) {
+  return LINE_BONUSES.filter(bonus => bonus.territories.every(name => classOwns(classNum, name)));
+}
+
+function lineBonusTotals(classNum) {
+  return activeLineBonuses(classNum).reduce((totals, bonus) => ({
+    attack: totals.attack + bonus.attack,
+    coins: totals.coins + bonus.coins,
+    score: totals.score + bonus.score,
+    raidDiscount: totals.raidDiscount + bonus.raidDiscount,
+  }), { attack: 0, coins: 0, score: 0, raidDiscount: 0 });
+}
+
 function territoryPowerSummary() {
-  return [
-    { name: '操場', effect: '佔領班級全員攻擊 +1' },
-    { name: '廚房', effect: '佔領班級答對金幣 +1' },
-    { name: '活動中心', effect: '佔領班級答對時更容易拿補給卡' },
-    { name: '籃球場', effect: '佔領班級突襲費用 -2' },
+  const basePowers = [
+    { name: '操場', effect: '大型據點：全班攻擊 +1' },
+    { name: '廚房', effect: '大型據點：答對金幣 +2' },
+    { name: '活動中心', effect: '大型據點：補給卡機率提高，10連勝補給加碼' },
+    { name: '籃球場', effect: '大型據點：突襲費用 -2' },
   ];
+  const linePowers = LINE_BONUSES.map(bonus => {
+    const activeClass = CLASSES.find(classNum => bonus.territories.every(name => classOwns(classNum, name))) || '';
+    return { name: bonus.name, effect: bonus.effect, activeClass, type: 'line' };
+  });
+  return [...basePowers, ...linePowers];
 }
 
 function normalizeCards(cards = {}) {
@@ -709,10 +785,12 @@ function studentLevelInfo(student) {
 function attackPower(student) {
   const levelInfo = studentLevelInfo(student);
   const levelBonus = levelInfo.currentLevel === 'final' ? 3 : levelInfo.currentLevel === 'phonics' ? 2 : levelInfo.currentLevel === 'festival' ? 1 : 0;
+  const lineBonus = lineBonusTotals(student.classNum);
   return 1
     + levelBonus
     + (normalizeRole(student.role) === 'warrior' ? 1 : 0)
     + (classOwns(student.classNum, '操場') ? 1 : 0)
+    + lineBonus.attack
     + (student.powerUps?.boost || 0);
 }
 
@@ -757,11 +835,15 @@ function applyCorrectAnswer(student, territoryName) {
   const frozen = (student.powerUps?.freeze || 0) > 0;
   const nextStreak = (student.streak || 0) + 1;
   const role = normalizeRole(student.role);
+  const lineBonus = lineBonusTotals(student.classNum);
 
   if (role === 'warrior') attack += 1;
   if (role === 'merchant') coins += 1;
   if (classOwns(student.classNum, '操場')) attack += 1;
-  if (classOwns(student.classNum, '廚房')) coins += 1;
+  if (classOwns(student.classNum, '廚房')) coins += 2;
+  attack += lineBonus.attack;
+  coins += lineBonus.coins;
+  bonusScore += lineBonus.score;
 
   if ((student.powerUps?.boost || 0) > 0) {
     attack += student.powerUps.boost;
@@ -815,7 +897,7 @@ function applyCorrectAnswer(student, territoryName) {
     coins += 3;
   }
 
-  if (!card && classOwns(student.classNum, '活動中心') && Math.random() < 0.18) {
+  if (!card && classOwns(student.classNum, '活動中心') && Math.random() < 0.28) {
     const supplyCard = randomCardType();
     addCard(student, supplyCard);
     card = `活動中心補給：${cardName(supplyCard)}`;
@@ -828,6 +910,7 @@ function applyCorrectAnswer(student, territoryName) {
   if (!card && nextStreak > 0 && nextStreak % 10 === 0) {
     const streakCard = randomCardType();
     addCard(student, streakCard);
+    if (classOwns(student.classNum, '活動中心')) addCard(student, randomCardType());
     card = `10 連勝補給：${cardName(streakCard)}`;
   }
 
@@ -880,6 +963,7 @@ function applyCorrectAnswer(student, territoryName) {
 }
 
 function captureTerritory(terr, student, fromEnemy) {
+  const activeBefore = new Set(activeLineBonuses(student.classNum).map(bonus => bonus.id));
   terr.ownerClass = student.classNum;
   terr.ownerStudentId = student.id;
   terr.ownerStudentName = student.name;
@@ -889,6 +973,14 @@ function captureTerritory(terr, student, fromEnemy) {
   student.score += fromEnemy ? 25 : 20;
   terr.lastEvent = `${student.classNum} 佔領成功`;
   pushEvent(`${student.classNum} ${student.name} 成為 ${terr.name} 守擂者！${normalizeRole(student.role) === 'guardian' ? '守衛防護啟動。' : ''}`, 'capture');
+  activeLineBonuses(student.classNum)
+    .filter(bonus => !activeBefore.has(bonus.id))
+    .forEach(bonus => {
+      student.score += 15;
+      student.coins += 5;
+      addCard(student, randomCardType());
+      pushEvent(`${student.classNum} 完成「${bonus.name}」連線！全班啟動：${bonus.effect}，${student.name} 獲得補給。`, 'capture');
+    });
 }
 
 function repairOwnedTerritory(classNum) {
@@ -939,6 +1031,7 @@ function itemCost(student, item) {
   if (!cost) return 0;
   if (normalizeRole(student.role) === 'merchant') cost = Math.max(1, cost - 1);
   if (item === 'raid' && classOwns(student.classNum, '籃球場')) cost = Math.max(1, cost - 2);
+  if (item === 'raid') cost = Math.max(1, cost - lineBonusTotals(student.classNum).raidDiscount);
   return cost;
 }
 

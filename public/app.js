@@ -1,4 +1,6 @@
 const ZONES = buildZones();
+const ROAD_TERRITORIES = ['北門道路', '東門道路', '南門道路', '西門道路', '維仁路30巷', '柳橋東路'];
+const MEGA_TERRITORIES = ['操場', '籃球場', '活動中心', '廚房'];
 
 function buildZones() {
   const zones = {};
@@ -38,6 +40,12 @@ function buildZones() {
   add('籃球場', 238, 395, 100, 150);
   add('活動中心', 1065, 285, 92, 230);
   add('廚房', 900, 180, 126, 104);
+  add('北門道路', 585, 112, 300, 44);
+  add('東門道路', 1154, 470, 48, 255);
+  add('南門道路', 740, 806, 380, 44);
+  add('西門道路', 35, 255, 48, 510);
+  add('維仁路30巷', 210, 112, 370, 44);
+  add('柳橋東路', 210, 806, 520, 44);
   return zones;
 }
 
@@ -343,12 +351,23 @@ function myLevelInfo() {
 function currentAttackPower() {
   const info = myLevelInfo();
   const ownsField = state.data?.territories?.['操場']?.ownerClass === state.student?.classNum;
+  const lineBonus = lineBonusTotals(state.student?.classNum);
   const levelBonus = info?.currentLevel === 'final' ? 3 : info?.currentLevel === 'phonics' ? 2 : info?.currentLevel === 'festival' ? 1 : 0;
   return 1
     + levelBonus
     + (state.student?.role === 'warrior' ? 1 : 0)
     + (ownsField ? 1 : 0)
+    + lineBonus.attack
     + (state.student?.powerUps?.boost || 0);
+}
+
+function lineBonusTotals(classNum) {
+  return (state.data?.territoryPowers || [])
+    .filter(power => power.type === 'line' && power.activeClass === classNum)
+    .reduce((totals, power) => ({
+      attack: totals.attack + ((power.effect || '').includes('攻擊 +1') ? 1 : 0),
+      raidDiscount: totals.raidDiscount + ((power.effect || '').includes('突襲費用 -1') ? 1 : 0),
+    }), { attack: 0, raidDiscount: 0 });
 }
 
 function renderLevel() {
@@ -442,9 +461,11 @@ function renderMap() {
     if (!territory) return;
     const ownerClass = territory?.ownerClass;
     const isRoom = /^[ABCD]\d/.test(name);
+    const isRoad = ROAD_TERRITORIES.includes(name);
+    const isMega = MEGA_TERRITORIES.includes(name);
     const isMine = territory.ownerStudentId === state.student?.id;
     const fill = ownerClass ? CLASS_COLORS[ownerClass] : '#475569';
-    const opacity = ownerClass ? (isMine ? 0.72 : 0.48) : 0.18;
+    const opacity = ownerClass ? (isMine ? 0.78 : 0.54) : isRoad ? 0.58 : isMega ? 0.46 : 0.38;
     const selected = name === state.target;
 
     if (selected) {
@@ -471,9 +492,10 @@ function renderMap() {
       fill,
       'fill-opacity': opacity,
       stroke: isMine ? '#facc15' : selected ? '#f59e0b' : fill,
-      'stroke-width': isMine ? 5 : selected ? 5 : 2,
+      'stroke-width': isMine ? 5 : selected ? 5 : isRoad || isMega ? 3 : 2,
+      style: `fill:${fill};fill-opacity:${opacity};stroke:${isMine ? '#facc15' : selected ? '#f59e0b' : fill};stroke-width:${isMine ? 5 : selected ? 5 : isRoad || isMega ? 3 : 2};`,
       filter: isMine ? 'url(#mineGlow)' : '',
-      class: `zone ${ownerClass ? `owner-zone owner-${ownerClass}` : ''} ${isMine ? 'mine-zone' : ''}`,
+      class: `zone ${isRoad ? 'road-zone' : ''} ${isMega ? 'mega-zone' : ''} ${ownerClass ? `owner-zone owner-${ownerClass}` : ''} ${isMine ? 'mine-zone' : ''}`,
     });
     rect.addEventListener('click', () => selectTerritory(name));
     svg.appendChild(rect);
@@ -483,7 +505,7 @@ function renderMap() {
     svg.appendChild(svgEl('text', {
       x: zone.cx,
       y: isRoom ? zone.cy - 3 : zone.cy - 10,
-      class: isRoom ? 'zone-label room-label' : 'zone-label',
+      class: isRoom ? 'zone-label room-label' : isRoad ? 'zone-label road-label' : 'zone-label',
     }, name));
 
     const sub = ownerClass
@@ -492,7 +514,7 @@ function renderMap() {
     svg.appendChild(svgEl('text', {
       x: zone.cx,
       y: isRoom ? zone.cy + 10 : zone.cy + 14,
-      class: isRoom ? 'zone-sub room-sub' : 'zone-sub',
+      class: isRoom ? 'zone-sub room-sub' : isRoad ? 'zone-sub road-sub' : 'zone-sub',
     }, isRoom && sub.length > 12 ? `${sub.slice(0, 12)}` : sub));
 
     if (ownerClass && isRoom) {
@@ -525,6 +547,42 @@ function renderMap() {
         class: 'zone-sub',
       }, '盾'));
     }
+  });
+  renderHtmlMapOverlay();
+}
+
+function renderHtmlMapOverlay() {
+  const overlay = $('#mapHtmlOverlay');
+  if (!overlay || !state.data) return;
+  overlay.innerHTML = Object.entries(ZONES).map(([name, zone]) => {
+    const territory = state.data.territories[name];
+    if (!territory) return '';
+    const ownerClass = territory.ownerClass || '';
+    const isRoad = ROAD_TERRITORIES.includes(name);
+    const isMega = MEGA_TERRITORIES.includes(name);
+    const isMine = territory.ownerStudentId === state.student?.id;
+    const selected = name === state.target;
+    const left = (zone.x / 1243) * 100;
+    const top = (zone.y / 888) * 100;
+    const width = (zone.w / 1243) * 100;
+    const height = (zone.h / 888) * 100;
+    const meta = ownerClass
+      ? `${ownerClass} ${territory.ownerStudentName || ''}`.trim()
+      : `${territory.progress['502']}/${territory.maxHp} · ${territory.progress['503']}/${territory.maxHp}`;
+    return `
+      <button
+        class="map-zone-card ${isRoad ? 'road-card' : ''} ${isMega ? 'mega-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''} ${isMine ? 'mine' : ''} ${selected ? 'selected' : ''}"
+        style="left:${left}%;top:${top}%;width:${width}%;height:${height}%;"
+        type="button"
+        data-map-zone="${escapeHtml(name)}"
+        title="${escapeHtml(name)}"
+      >
+        <span>${escapeHtml(name)}</span>
+        <small>${escapeHtml(meta)}</small>
+      </button>`;
+  }).join('');
+  overlay.querySelectorAll('[data-map-zone]').forEach(button => {
+    button.addEventListener('click', () => selectTerritory(button.dataset.mapZone));
   });
 }
 
@@ -623,10 +681,16 @@ function renderTargetInfo() {
 
 function territoryEffectText(name) {
   return {
-    '操場': '特殊據點：佔領班級全員攻擊 +1。',
-    '廚房': '特殊據點：佔領班級答對時金幣 +1。',
-    '活動中心': '特殊據點：佔領班級答對時更容易拿補給卡。',
-    '籃球場': '特殊據點：佔領班級突襲費用 -2。',
+    '操場': '大型據點：佔領班級全員攻擊 +1。',
+    '廚房': '大型據點：佔領班級答對時金幣 +2。',
+    '活動中心': '大型據點：補給卡機率提高，10連勝補給加碼。',
+    '籃球場': '大型據點：突襲費用 -2。',
+    '北門道路': '道路據點：佔滿四周道路可啟動外環封鎖。',
+    '東門道路': '道路據點：佔滿四周道路可啟動外環封鎖。',
+    '南門道路': '道路據點：佔滿四周道路可啟動外環封鎖。',
+    '西門道路': '道路據點：佔滿四周道路可啟動外環封鎖。',
+    '維仁路30巷': '道路據點：延伸戰線，可作為外圍防線。',
+    '柳橋東路': '道路據點：延伸戰線，可作為外圍防線。',
   }[name] || '';
 }
 
@@ -635,11 +699,11 @@ function renderPowers() {
   if (!list || !state.data) return;
   const powers = state.data.territoryPowers || [];
   list.innerHTML = powers.map(power => {
-    const owner = state.data.territories?.[power.name]?.ownerClass;
+    const owner = power.activeClass || state.data.territories?.[power.name]?.ownerClass;
     return `
       <div class="power-row ${owner ? `owner-${owner}` : ''}">
         <strong>${escapeHtml(power.name)}</strong>
-        <span>${owner ? `${owner} 啟動中` : '尚未啟動'}</span>
+        <span>${owner ? `${owner} 啟動中` : power.type === 'line' ? '待連線' : '尚未啟動'}</span>
         <small>${escapeHtml(power.effect)}</small>
       </div>
     `;
@@ -681,6 +745,7 @@ function itemCost(item) {
   let cost = base[item] || 0;
   if (state.student?.role === 'merchant') cost = Math.max(1, cost - 1);
   if (item === 'raid' && state.data?.territories?.['籃球場']?.ownerClass === state.student?.classNum) cost = Math.max(1, cost - 2);
+  if (item === 'raid') cost = Math.max(1, cost - lineBonusTotals(state.student?.classNum).raidDiscount);
   return cost;
 }
 
