@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>岡山大作戰投影模式</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="display-body">
+  <main class="display-layout">
+    <header class="display-header">
+      <div>
+        <p class="eyebrow">教師投影模式</p>
+        <h1>岡山大作戰</h1>
+      </div>
+      <div id="displayClock" class="display-clock"></div>
+    </header>
+
+    <section class="display-scoreboard">
+      <article class="display-class class-502">
+        <span>502</span>
+        <strong id="display502Score">0 分</strong>
+        <small id="display502Meta">0 人 · 0 地</small>
+      </article>
+      <article class="display-class class-503">
+        <span>503</span>
+        <strong id="display503Score">0 分</strong>
+        <small id="display503Meta">0 人 · 0 地</small>
+      </article>
+    </section>
+
+    <section class="display-main">
+      <div class="display-map">
+        <img src="map.jpg" alt="岡山國小校園地圖">
+        <svg id="displayMapSvg" viewBox="0 0 1243 888" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <aside class="display-side">
+        <section class="display-card">
+          <h2>特殊據點</h2>
+          <div id="displayPowers" class="power-list"></div>
+        </section>
+        <section class="display-card">
+          <h2>排行榜</h2>
+          <div id="displayLeaders" class="leaderboard-list"></div>
+        </section>
+        <section class="display-card">
+          <h2>即時戰況</h2>
+          <div id="displayEvents" class="display-events"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script src="display.js"></script>
+</body>
+</html>

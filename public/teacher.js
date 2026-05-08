@@ -195,6 +195,7 @@ function renderStudents() {
       <tr>
         <td>${student.classNum}</td>
         <td>${escapeHtml(student.name)}</td>
+        <td>${escapeHtml(roleName(student.role))}</td>
         <td>${student.score || 0}</td>
         <td>${student.coins || 0}</td>
         <td>${student.correct || 0}</td>
@@ -215,6 +216,11 @@ function renderStudents() {
   document.querySelectorAll('[data-student-level]').forEach(button => {
     button.addEventListener('click', () => setStudentLevel(button.dataset.studentLevel, button.dataset.nextLevel));
   });
+}
+
+function roleName(role) {
+  const roles = data?.roles || [];
+  return roles.find(item => item.id === role)?.name || '戰士';
 }
 
 function getLevelInfo(student) {

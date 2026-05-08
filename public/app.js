@@ -50,6 +50,7 @@ const pageParams = new URLSearchParams(location.search);
 
 const state = {
   selectedClass: '',
+  selectedRole: 'warrior',
   student: null,
   data: null,
   questions: [],
@@ -192,6 +193,13 @@ function chooseClass(classNum) {
   });
 }
 
+function chooseRole(role) {
+  state.selectedRole = role || 'warrior';
+  $$('.role-choice').forEach(button => {
+    button.classList.toggle('active', button.dataset.role === state.selectedRole);
+  });
+}
+
 async function login() {
   const loginButton = $('#loginButton');
   const name = $('#nameInput').value.trim();
@@ -212,7 +220,7 @@ async function login() {
     const res = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ classNum: state.selectedClass, name }),
+      body: JSON.stringify({ classNum: state.selectedClass, name, role: state.selectedRole }),
     });
     payload = await res.json();
     if (!res.ok) {
@@ -232,6 +240,7 @@ async function login() {
   state.questions = payload.state.questions || [];
   localStorage.setItem('gangshan-class', state.selectedClass);
   localStorage.setItem('gangshan-name', name);
+  localStorage.setItem('gangshan-role', state.selectedRole);
   $('#loginView').hidden = true;
   $('#gameView').hidden = false;
   resetQuestionArea();
@@ -248,15 +257,23 @@ function renderAll() {
   renderTargetInfo();
   renderLevel();
   renderLeaderboard();
+  renderPowers();
 }
 
 function renderPlayer() {
   if (!state.student) return;
   $('#playerTitle').textContent = `${state.student.classNum} ${state.student.name}`;
+  const role = roleInfo(state.student.role);
+  $('#roleBadge').textContent = `${role.name} · ${role.short}`;
   $('#myScore').textContent = state.student.score || 0;
   $('#myCoins').textContent = state.student.coins || 0;
   $('#myStreak').textContent = state.student.streak || 0;
   $('#myAttack').textContent = currentAttackPower();
+}
+
+function roleInfo(role) {
+  const roles = state.data?.roles || [];
+  return roles.find(item => item.id === role) || roles[0] || { id: 'warrior', name: '戰士', short: '攻擊 +1' };
 }
 
 function getLevelInfo(student) {
@@ -297,7 +314,12 @@ function myLevelInfo() {
 
 function currentAttackPower() {
   const info = myLevelInfo();
-  return 1 + (info?.currentLevel === 'festival' ? 1 : 0) + (state.student?.powerUps?.boost || 0);
+  const ownsField = state.data?.territories?.['操場']?.ownerClass === state.student?.classNum;
+  return 1
+    + (info?.currentLevel === 'festival' ? 1 : 0)
+    + (state.student?.role === 'warrior' ? 1 : 0)
+    + (ownsField ? 1 : 0)
+    + (state.student?.powerUps?.boost || 0);
 }
 
 function renderLevel() {
@@ -566,7 +588,32 @@ function renderTargetInfo() {
     owner.textContent = `尚未佔領 · 502 ${territory.progress['502']}/${territory.maxHp} · 503 ${territory.progress['503']}/${territory.maxHp}`;
     owner.className = 'target-owner';
   }
-  power.textContent = territory.power || '答題成功就能推進。';
+  power.textContent = territoryEffectText(territory.name) || territory.power || '答題成功就能推進。';
+}
+
+function territoryEffectText(name) {
+  return {
+    '操場': '特殊據點：佔領班級全員攻擊 +1。',
+    '廚房': '特殊據點：佔領班級答對時金幣 +1。',
+    '活動中心': '特殊據點：佔領班級答對時更容易拿補給卡。',
+    '籃球場': '特殊據點：佔領班級突襲費用 -2。',
+  }[name] || '';
+}
+
+function renderPowers() {
+  const list = $('#powerList');
+  if (!list || !state.data) return;
+  const powers = state.data.territoryPowers || [];
+  list.innerHTML = powers.map(power => {
+    const owner = state.data.territories?.[power.name]?.ownerClass;
+    return `
+      <div class="power-row ${owner ? `owner-${owner}` : ''}">
+        <strong>${escapeHtml(power.name)}</strong>
+        <span>${owner ? `${owner} 啟動中` : '尚未啟動'}</span>
+        <small>${escapeHtml(power.effect)}</small>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderShop() {
@@ -590,6 +637,21 @@ function renderShop() {
       return `<option value="${escapeHtml(student.id)}">${student.classNum} ${escapeHtml(student.name)} · ${owned} 地 · ${student.coins || 0} 金幣</option>`;
     }).join('')
     : '<option value="">等待其他同學加入</option>';
+
+  $$('.shop-button').forEach(button => {
+    const item = button.dataset.item;
+    const small = button.querySelector('small');
+    if (small) small.textContent = `${itemCost(item)} 金幣`;
+  });
+  $('#raidButton').textContent = `突襲 ${itemCost('raid')}`;
+}
+
+function itemCost(item) {
+  const base = { repair: 5, shield: 6, boost: 8, steal: 7, freeze: 6, rent: 9, pack: 6, raid: 10 };
+  let cost = base[item] || 0;
+  if (state.student?.role === 'merchant') cost = Math.max(1, cost - 1);
+  if (item === 'raid' && state.data?.territories?.['籃球場']?.ownerClass === state.student?.classNum) cost = Math.max(1, cost - 2);
+  return cost;
 }
 
 function startQuestion() {
@@ -1046,12 +1108,17 @@ function escapeHtml(value) {
 function restoreLogin() {
   const savedClass = localStorage.getItem('gangshan-class');
   const savedName = localStorage.getItem('gangshan-name');
+  const savedRole = localStorage.getItem('gangshan-role');
   if (savedClass) chooseClass(savedClass);
   if (savedName) $('#nameInput').value = savedName;
+  if (savedRole) chooseRole(savedRole);
 }
 
 $$('.class-choice').forEach(button => {
   button.addEventListener('click', () => chooseClass(button.dataset.class));
+});
+$$('.role-choice').forEach(button => {
+  button.addEventListener('click', () => chooseRole(button.dataset.role));
 });
 
 $('#loginButton').addEventListener('click', login);

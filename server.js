@@ -110,6 +110,13 @@ const LEVELS = [
   { id: 'festival', name: '第二關 節慶英語', order: 2 },
 ];
 
+const ROLES = {
+  warrior: { id: 'warrior', name: '戰士', short: '攻擊 +1' },
+  engineer: { id: 'engineer', name: '工程師', short: '修復更強' },
+  merchant: { id: 'merchant', name: '商人', short: '金幣 +1' },
+  guardian: { id: 'guardian', name: '守衛', short: '佔領帶防護' },
+};
+
 const TERRITORIES = buildTerritories();
 
 function levelName(level) {
@@ -257,6 +264,7 @@ function normalizeLoadedData(data) {
     s.cards = normalizeCards(s.cards);
     s.questionStats = s.questionStats || {};
     s.manualLevel = LEVELS.some(level => level.id === s.manualLevel) ? s.manualLevel : '';
+    s.role = normalizeRole(s.role);
     s.color = s.color || STUDENT_COLORS[(data.colorIndex++) % STUDENT_COLORS.length];
   });
 
@@ -288,6 +296,8 @@ function publicState() {
     ...gameData,
     questions: allQuestions(),
     levels: LEVELS,
+    roles: Object.values(ROLES),
+    territoryPowers: territoryPowerSummary(),
     leaderboard: leaderboard(),
     rankings: rankedStudents(),
     classColors: CLASS_COLORS,
@@ -324,6 +334,27 @@ function pushEvent(text, type = 'info') {
 
 function randomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function normalizeRole(role) {
+  return ROLES[role] ? role : 'warrior';
+}
+
+function roleName(role) {
+  return ROLES[normalizeRole(role)].name;
+}
+
+function classOwns(classNum, territoryName) {
+  return gameData.territories[territoryName]?.ownerClass === classNum;
+}
+
+function territoryPowerSummary() {
+  return [
+    { name: '操場', effect: '佔領班級全員攻擊 +1' },
+    { name: '廚房', effect: '佔領班級答對金幣 +1' },
+    { name: '活動中心', effect: '佔領班級答對時更容易拿補給卡' },
+    { name: '籃球場', effect: '佔領班級突襲費用 -2' },
+  ];
 }
 
 function normalizeCards(cards = {}) {
@@ -374,7 +405,11 @@ function studentLevelInfo(student) {
 
 function attackPower(student) {
   const levelInfo = studentLevelInfo(student);
-  return 1 + (levelInfo.currentLevel === 'festival' ? 1 : 0) + (student.powerUps?.boost || 0);
+  return 1
+    + (levelInfo.currentLevel === 'festival' ? 1 : 0)
+    + (normalizeRole(student.role) === 'warrior' ? 1 : 0)
+    + (classOwns(student.classNum, '操場') ? 1 : 0)
+    + (student.powerUps?.boost || 0);
 }
 
 function leaderboard() {
@@ -393,6 +428,7 @@ function rankedStudents() {
       answered: (s.correct || 0) + (s.wrong || 0),
       lands: Object.values(gameData.territories).filter(t => t.ownerStudentId === s.id).length,
       attackPower: attackPower(s),
+      roleName: roleName(s.role),
       levelName: studentLevelInfo(s).currentLevelName,
     }))
     .sort((a, b) => b.score - a.score || b.lands - a.lands || b.answered - a.answered)
@@ -416,6 +452,12 @@ function applyCorrectAnswer(student, territoryName) {
   const levelInfo = studentLevelInfo(student);
   const frozen = (student.powerUps?.freeze || 0) > 0;
   const nextStreak = (student.streak || 0) + 1;
+  const role = normalizeRole(student.role);
+
+  if (role === 'warrior') attack += 1;
+  if (role === 'merchant') coins += 1;
+  if (classOwns(student.classNum, '操場')) attack += 1;
+  if (classOwns(student.classNum, '廚房')) coins += 1;
 
   if ((student.powerUps?.boost || 0) > 0) {
     attack += student.powerUps.boost;
@@ -463,6 +505,12 @@ function applyCorrectAnswer(student, territoryName) {
     coins += 1;
   }
 
+  if (!card && classOwns(student.classNum, '活動中心') && Math.random() < 0.18) {
+    const supplyCard = randomCardType();
+    addCard(student, supplyCard);
+    card = `活動中心補給：${cardName(supplyCard)}`;
+  }
+
   if (nextStreak > 0 && nextStreak % 3 === 0) {
     coins += 2;
   }
@@ -474,8 +522,9 @@ function applyCorrectAnswer(student, territoryName) {
   }
 
   if (terr.ownerClass === student.classNum) {
-    terr.hp = Math.min(terr.maxHp, (terr.hp || 0) + attack);
-    terr.lastEvent = `${student.classNum} ${student.name} 修復 +${attack}`;
+    const repairAmount = attack + (role === 'engineer' ? 1 : 0);
+    terr.hp = Math.min(terr.maxHp, (terr.hp || 0) + repairAmount);
+    terr.lastEvent = `${student.classNum} ${student.name} 修復 +${repairAmount}`;
   } else if (terr.ownerClass && terr.ownerClass !== student.classNum) {
     if (terr.shieldUntil > now()) {
       terr.lastEvent = `${terr.name} 有防護罩，攻擊被擋下`;
@@ -526,10 +575,10 @@ function captureTerritory(terr, student, fromEnemy) {
   terr.ownerStudentName = student.name;
   terr.hp = terr.maxHp;
   terr.progress = { '502': 0, '503': 0 };
-  terr.shieldUntil = 0;
+  terr.shieldUntil = normalizeRole(student.role) === 'guardian' ? now() + 120 * 1000 : 0;
   student.score += fromEnemy ? 25 : 20;
   terr.lastEvent = `${student.classNum} 佔領成功`;
-  pushEvent(`${student.classNum} ${student.name} 成為 ${terr.name} 守擂者！`, 'capture');
+  pushEvent(`${student.classNum} ${student.name} 成為 ${terr.name} 守擂者！${normalizeRole(student.role) === 'guardian' ? '守衛防護啟動。' : ''}`, 'capture');
 }
 
 function repairOwnedTerritory(classNum) {
@@ -574,20 +623,29 @@ function neutralizeTerritory(terr) {
   terr.shieldUntil = 0;
 }
 
+function itemCost(student, item) {
+  const base = { repair: 5, shield: 6, boost: 8, steal: 7, freeze: 6, rent: 9, pack: 6, raid: 10 };
+  let cost = base[item];
+  if (!cost) return 0;
+  if (normalizeRole(student.role) === 'merchant') cost = Math.max(1, cost - 1);
+  if (item === 'raid' && classOwns(student.classNum, '籃球場')) cost = Math.max(1, cost - 2);
+  return cost;
+}
+
 function useShopItem(student, item, targetStudentId, territoryName) {
-  const costs = { repair: 5, shield: 6, boost: 8, steal: 7, freeze: 6, rent: 9, pack: 6, raid: 10 };
-  if (!costs[item]) return { ok: false, error: '找不到這個道具。' };
-  if ((student.coins || 0) < costs[item]) return { ok: false, error: '金幣不夠。' };
+  const cost = itemCost(student, item);
+  if (!cost) return { ok: false, error: '找不到這個道具。' };
+  if ((student.coins || 0) < cost) return { ok: false, error: '金幣不夠。' };
 
   if (['boost', 'repair', 'shield', 'steal', 'freeze', 'rent'].includes(item)) {
-    student.coins -= costs[item];
+    student.coins -= cost;
     addCard(student, item);
     pushEvent(`${student.classNum} ${student.name} 買了 1 張${cardName(item)}。`, 'shop');
     return { ok: true, message: `已購買 1 張${cardName(item)}，可以在卡牌區使用。` };
   }
 
   if (item === 'pack') {
-    student.coins -= costs[item];
+    student.coins -= cost;
     const cardType = randomCardType();
     addCard(student, cardType);
     pushEvent(`${student.classNum} ${student.name} 打開補給包，抽到${cardName(cardType)}。`, 'shop');
@@ -604,11 +662,11 @@ function useShopItem(student, item, targetStudentId, territoryName) {
     if (owned.length === 0) return { ok: false, error: '這位同學目前沒有可突襲的據點。' };
     const terr = randomItem(owned);
     if (terr.shieldUntil > now()) {
-      student.coins -= costs[item];
+      student.coins -= cost;
       pushEvent(`${student.name} 突襲 ${target.name}，但 ${terr.name} 的防護罩擋住了。`, 'shop');
       return { ok: true, message: `${target.name} 的 ${terr.name} 有防護罩，突襲被擋下。` };
     }
-    student.coins -= costs[item];
+    student.coins -= cost;
     terr.hp -= 3;
     terr.lastEvent = `${student.name} 突襲 ${target.name} -3`;
     if (terr.hp <= 0) {
@@ -655,10 +713,11 @@ function useCardItem(student, item, targetStudentId, territoryName) {
       ? gameData.territories[territoryName]
       : candidates.sort((a, b) => a.hp - b.hp)[0];
     student.cards.repair -= 1;
-    terr.hp = Math.min(terr.maxHp, terr.hp + 4);
-    terr.lastEvent = `${student.name} 使用修復卡 +4`;
+    const amount = normalizeRole(student.role) === 'engineer' ? 6 : 4;
+    terr.hp = Math.min(terr.maxHp, terr.hp + amount);
+    terr.lastEvent = `${student.name} 使用修復卡 +${amount}`;
     pushEvent(`${student.classNum} ${student.name} 修復了 ${terr.name}。`, 'shop');
-    return { ok: true, message: `${terr.name} 修復 +4。` };
+    return { ok: true, message: `${terr.name} 修復 +${amount}。` };
   }
 
   if (item === 'shield') {
@@ -667,10 +726,11 @@ function useCardItem(student, item, targetStudentId, territoryName) {
       return { ok: false, error: '請先選一塊己方佔領的土地。' };
     }
     student.cards.shield -= 1;
-    terr.shieldUntil = now() + 90 * 1000;
+    const seconds = normalizeRole(student.role) === 'engineer' ? 150 : 90;
+    terr.shieldUntil = now() + seconds * 1000;
     terr.lastEvent = `${student.name} 架設防護罩`;
     pushEvent(`${student.classNum} ${student.name} 替 ${terr.name} 架設防護罩。`, 'shop');
-    return { ok: true, message: `${terr.name} 已獲得 90 秒防護罩。` };
+    return { ok: true, message: `${terr.name} 已獲得 ${seconds} 秒防護罩。` };
   }
 
   if (item === 'steal') {
@@ -692,7 +752,7 @@ function useCardItem(student, item, targetStudentId, territoryName) {
 
   if (item === 'rent') {
     const lands = Object.values(gameData.territories).filter(t => t.ownerStudentId === student.id).length;
-    const amount = lands ? Math.min(12, lands * 2 + 2) : 3;
+    const amount = lands ? Math.min(14, lands * 2 + 2 + (normalizeRole(student.role) === 'merchant' ? 2 : 0)) : 3;
     student.cards.rent -= 1;
     student.coins += amount;
     pushEvent(`${student.classNum} ${student.name} 收租得到 ${amount} 金幣。`, 'shop');
@@ -970,6 +1030,7 @@ app.post('/api/teacher/students/:id/level', (req, res) => {
 app.post('/api/login', (req, res) => {
   const classNum = String(req.body.classNum || '');
   const name = cleanName(req.body.name);
+  const role = normalizeRole(req.body.role);
   if (!CLASSES.includes(classNum)) return res.status(400).json({ error: '請選擇班級。' });
   if (!/^[A-Za-z][A-Za-z0-9 ]{0,23}$/.test(name)) {
     return res.status(400).json({ error: '英文名字請用英文字母開頭。' });
@@ -991,14 +1052,16 @@ app.post('/api/login', (req, res) => {
       cards: normalizeCards(),
       questionStats: {},
       manualLevel: '',
+      role,
       wrongLog: {},
       recordingCount: 0,
       color: STUDENT_COLORS[gameData.colorIndex++ % STUDENT_COLORS.length],
       joinedAt: now(),
       lastSeen: now(),
     };
-    pushEvent(`${classNum} 班 ${name} 加入戰場。`, 'join');
+    pushEvent(`${classNum} 班 ${name} 以${roleName(role)}加入戰場。`, 'join');
   } else {
+    gameData.students[id].role = normalizeRole(gameData.students[id].role || role);
     gameData.students[id].lastSeen = now();
   }
   save();

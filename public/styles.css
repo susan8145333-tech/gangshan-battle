@@ -89,6 +89,44 @@ h1 {
   margin: 24px 0 18px;
 }
 
+.role-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.role-choice {
+  min-height: 58px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.role-choice strong,
+.role-choice small {
+  display: block;
+}
+
+.role-choice strong {
+  font-size: 15px;
+}
+
+.role-choice small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.role-choice.active {
+  border-color: var(--gold);
+  background: #fffbeb;
+}
+
 .class-choice {
   height: 64px;
   border: 2px solid var(--line);
@@ -207,6 +245,17 @@ h1 {
 .game-header h2 {
   margin: 0;
   font-size: 24px;
+}
+
+.role-badge {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .score-strip {
@@ -459,6 +508,7 @@ h1 {
 .shop-card,
 .question-card,
 .record-card,
+.power-card,
 .leaderboard-card,
 .result-box {
   padding: 16px;
@@ -467,6 +517,53 @@ h1 {
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(10px);
+}
+
+.power-card {
+  display: grid;
+  gap: 8px;
+}
+
+.power-list {
+  display: grid;
+  gap: 7px;
+}
+
+.power-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.power-row strong {
+  grid-row: span 2;
+}
+
+.power-row span {
+  font-size: 12px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.power-row small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.power-row.owner-502 {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.power-row.owner-503 {
+  border-color: #fecdd3;
+  background: #fff1f2;
 }
 
 .leaderboard-card {
@@ -841,6 +938,149 @@ h1 {
 
 .teacher-body {
   background: #f8fafc;
+}
+
+.display-body {
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(37, 99, 235, 0.16), transparent 32%),
+    radial-gradient(circle at 80% 10%, rgba(220, 38, 38, 0.13), transparent 28%),
+    #eef4f8;
+}
+
+.display-layout {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 12px;
+  padding: 16px;
+}
+
+.display-header,
+.display-scoreboard,
+.display-main {
+  min-width: 0;
+}
+
+.display-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.display-header h1 {
+  margin: 0;
+  font-size: 36px;
+}
+
+.display-clock {
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.display-scoreboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.display-class {
+  min-height: 108px;
+  padding: 18px 22px;
+  border-radius: 8px;
+  color: #fff;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 18px;
+}
+
+.display-class span {
+  grid-row: span 2;
+  font-size: 54px;
+  font-weight: 900;
+}
+
+.display-class strong {
+  font-size: 34px;
+}
+
+.display-class small {
+  font-size: 18px;
+  font-weight: 800;
+  opacity: 0.92;
+}
+
+.display-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 12px;
+  min-height: 0;
+}
+
+.display-map {
+  position: relative;
+  min-height: 0;
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #d7e8d0;
+  box-shadow: 0 24px 55px rgba(15, 23, 42, 0.18);
+}
+
+.display-map img,
+.display-map svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.display-map img {
+  filter: saturate(1.08) contrast(1.03);
+}
+
+.display-side {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 12px;
+  min-height: 0;
+}
+
+.display-card {
+  padding: 15px;
+  border: 1px solid rgba(219, 227, 239, 0.92);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+.display-card h2 {
+  margin-bottom: 10px;
+  font-size: 20px;
+}
+
+.display-events {
+  display: grid;
+  gap: 8px;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.display-event {
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: #eef2ff;
+  color: #312e81;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .teacher-header {

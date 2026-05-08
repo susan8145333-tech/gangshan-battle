@@ -25,6 +25,13 @@
 
       <label class="field-label" for="nameInput">英文名字</label>
       <input id="nameInput" class="name-input" autocomplete="given-name" placeholder="例如 Susan" maxlength="24">
+      <label class="field-label">選擇角色</label>
+      <div class="role-picker" role="group" aria-label="角色">
+        <button class="role-choice active" data-role="warrior" type="button"><strong>戰士</strong><small>攻擊 +1</small></button>
+        <button class="role-choice" data-role="engineer" type="button"><strong>工程師</strong><small>修復更強</small></button>
+        <button class="role-choice" data-role="merchant" type="button"><strong>商人</strong><small>金幣更多</small></button>
+        <button class="role-choice" data-role="guardian" type="button"><strong>守衛</strong><small>佔領防護</small></button>
+      </div>
       <button id="loginButton" class="primary-button" type="button">開始攻佔</button>
       <p id="loginHint" class="hint"></p>
     </section>
@@ -35,6 +42,7 @@
       <div>
         <p class="eyebrow">岡山大作戰</p>
         <h2 id="playerTitle">502 Susan</h2>
+        <div id="roleBadge" class="role-badge">戰士 · 攻擊 +1</div>
       </div>
       <div class="score-strip">
         <div><span id="myScore">0</span><small>分數</small></div>
@@ -77,6 +85,14 @@
           <div id="targetOwner" class="target-owner">目前尚未被佔領</div>
           <small id="targetPower">先點地圖上的大區域</small>
         </div>
+
+        <section class="power-card">
+          <div class="question-topline">
+            <span>特殊據點</span>
+            <strong>班級效果</strong>
+          </div>
+          <div id="powerList" class="power-list"></div>
+        </section>
 
         <section class="shop-card">
           <div class="question-topline">
