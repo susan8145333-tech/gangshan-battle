@@ -54,12 +54,98 @@ const CLASS_COLORS = {
 };
 
 let data = null;
+let restoreOffered = false;
 
 const $ = selector => document.querySelector(selector);
+const BACKUP_KEY = 'gangshan-battle-teacher-backup-v1';
+
+function makeBackupSnapshot(source = data) {
+  return {
+    version: 2,
+    students: source?.students || {},
+    territories: source?.territories || {},
+    recordings: source?.recordings || [],
+    answerLog: source?.answerLog || [],
+    events: source?.events || [],
+    customQuestions: source?.customQuestions || [],
+    questionOverrides: source?.questionOverrides || {},
+    deletedQuestionIds: source?.deletedQuestionIds || [],
+    colorIndex: source?.colorIndex || 0,
+    startedAt: source?.startedAt || Date.now(),
+  };
+}
+
+function stateWeight(source) {
+  const game = source?.game || source || {};
+  const students = Object.keys(game.students || {}).length;
+  const owned = Object.values(game.territories || {}).filter(t => t?.ownerClass || t?.ownerStudentId).length;
+  const recordings = (game.recordings || []).length;
+  const answers = (game.answerLog || []).length;
+  const events = (game.events || []).length;
+  return students * 5 + owned * 3 + recordings * 2 + answers * 2 + events;
+}
+
+function readLocalBackup() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(BACKUP_KEY) || 'null');
+    if (!parsed?.game) return null;
+    return parsed;
+  } catch (err) {
+    return null;
+  }
+}
+
+function writeLocalBackup() {
+  if (!data) return;
+  const game = makeBackupSnapshot(data);
+  const nextWeight = stateWeight(game);
+  if (nextWeight === 0) return;
+  const previous = readLocalBackup();
+  const previousWeight = stateWeight(previous);
+  if (previousWeight > nextWeight && Object.keys(game.students || {}).length === 0) return;
+  localStorage.setItem(BACKUP_KEY, JSON.stringify({
+    savedAt: new Date().toISOString(),
+    game,
+  }));
+}
+
+async function restoreSnapshot(snapshot) {
+  const res = await fetch('/api/teacher/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ game: snapshot }),
+  });
+  if (!res.ok) {
+    const message = await res.json().catch(() => ({ error: '還原失敗。' }));
+    throw new Error(message.error || '還原失敗。');
+  }
+  const result = await res.json();
+  data = result.state;
+  writeLocalBackup();
+  render();
+}
+
+async function offerLocalRestoreIfNeeded() {
+  if (restoreOffered || !data) return;
+  const backup = readLocalBackup();
+  if (!backup) return;
+  if (stateWeight(data) > 2 || stateWeight(backup) <= 5) return;
+  restoreOffered = true;
+  const savedAt = backup.savedAt ? formatTime(backup.savedAt) : '之前';
+  if (!confirm(`偵測到老師電腦有 ${savedAt} 的遊戲備份，目前伺服器像是空資料。要還原嗎？`)) return;
+  try {
+    await restoreSnapshot(backup.game);
+    alert('已還原老師電腦中的備份。');
+  } catch (err) {
+    alert(err.message);
+  }
+}
 
 async function loadState() {
   const res = await fetch('/api/state');
   data = await res.json();
+  await offerLocalRestoreIfNeeded();
+  writeLocalBackup();
   render();
 }
 
@@ -70,6 +156,7 @@ function connectSocket() {
     const message = JSON.parse(event.data);
     if (message.type !== 'state') return;
     data = message.data;
+    writeLocalBackup();
     render();
   };
   ws.onclose = () => setTimeout(connectSocket, 1500);
@@ -487,6 +574,58 @@ async function postTeacherAction(url, message) {
   if (!confirm(message)) return;
   await fetch(url, { method: 'POST' });
 }
+
+function downloadBackup() {
+  if (!data) return;
+  const snapshot = {
+    exportedAt: new Date().toISOString(),
+    game: makeBackupSnapshot(data),
+  };
+  localStorage.setItem(BACKUP_KEY, JSON.stringify({
+    savedAt: snapshot.exportedAt,
+    game: snapshot.game,
+  }));
+  const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `岡山大作戰備份-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function restoreBackupFile(file) {
+  if (!file) return;
+  try {
+    const parsed = JSON.parse(await file.text());
+    const snapshot = parsed.game || parsed.data || parsed;
+    if (!confirm('確定要用這份備份覆蓋目前遊戲資料嗎？')) return;
+    await restoreSnapshot(snapshot);
+    alert('備份已還原。');
+  } catch (err) {
+    alert(err.message || '備份檔無法讀取。');
+  }
+}
+
+$('#downloadBackupButton').addEventListener('click', downloadBackup);
+
+$('#restoreBackupButton').addEventListener('click', () => {
+  const localBackup = readLocalBackup();
+  if (localBackup && confirm(`要先還原老師電腦內 ${formatTime(localBackup.savedAt)} 的自動備份嗎？\n\n按「取消」可改選 JSON 備份檔。`)) {
+    restoreSnapshot(localBackup.game)
+      .then(() => alert('已還原老師電腦中的自動備份。'))
+      .catch(err => alert(err.message));
+    return;
+  }
+  $('#restoreBackupInput').click();
+});
+
+$('#restoreBackupInput').addEventListener('change', event => {
+  restoreBackupFile(event.target.files?.[0]);
+  event.target.value = '';
+});
 
 $('#resetMapButton').addEventListener('click', () => {
   postTeacherAction('/api/teacher/reset-map', '確定要清空土地佔領狀態嗎？學生分數與錯題會保留。');

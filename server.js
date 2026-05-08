@@ -556,7 +556,24 @@ function initData() {
 
 let gameData = initData();
 
+function restorableSnapshot(source = {}) {
+  return {
+    version: 2,
+    students: source.students || {},
+    territories: source.territories || {},
+    recordings: source.recordings || [],
+    answerLog: source.answerLog || [],
+    events: source.events || [],
+    customQuestions: source.customQuestions || [],
+    questionOverrides: source.questionOverrides || {},
+    deletedQuestionIds: source.deletedQuestionIds || [],
+    colorIndex: source.colorIndex || 0,
+    startedAt: source.startedAt || now(),
+  };
+}
+
 function normalizeLoadedData(data) {
+  data = restorableSnapshot(data || {});
   const fresh = initData();
   data.version = 2;
   data.students = data.students || {};
@@ -1355,6 +1372,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/state', (req, res) => res.json(publicState()));
 
+app.get('/api/teacher/backup.json', (req, res) => {
+  const filename = `岡山大作戰備份-${new Date().toISOString().slice(0, 10)}.json`;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+  res.json({
+    exportedAt: new Date().toISOString(),
+    game: restorableSnapshot(gameData),
+  });
+});
+
 app.get('/api/questions', (req, res) => res.json({ questions: allQuestions(), levels: LEVELS }));
 
 app.post('/api/teacher/questions', (req, res) => {
@@ -1599,6 +1626,18 @@ app.post('/api/teacher/reset-all', (req, res) => {
   save();
   broadcast();
   res.json({ ok: true });
+});
+
+app.post('/api/teacher/restore', (req, res) => {
+  const source = req.body?.game || req.body?.data || req.body;
+  if (!source || typeof source !== 'object') {
+    return res.status(400).json({ error: '備份檔格式不正確。' });
+  }
+  gameData = normalizeLoadedData(restorableSnapshot(source));
+  pushEvent('老師還原備份資料。', 'teacher');
+  save();
+  broadcast();
+  res.json({ ok: true, state: publicState() });
 });
 
 wss.on('connection', ws => {
