@@ -558,19 +558,24 @@ function renderHtmlMapOverlay() {
     const share502 = total ? Math.round(((territory.progress?.['502'] || 0) / total) * 100) : 0;
     const share503 = total ? 100 - share502 : 0;
     const progressMeta = `502 ${share502}%｜503 ${share503}%`;
+    const isCompact = zone.w < 130 || zone.h < 120;
     const showOwner = Boolean(ownerMeta);
-    const showProgress = selected && !showOwner;
+    const showProgress = selected && !showOwner && !isCompact;
     return `
       <button
-        class="map-zone-card ${isRoom ? 'room-card' : ''} ${isRoad ? 'road-card' : ''} ${isMega ? 'mega-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''} ${isMine ? 'mine' : ''} ${selected ? 'selected' : ''}"
+        class="map-zone-card ${isRoom ? 'room-card' : ''} ${isRoad ? 'road-card' : ''} ${isMega ? 'mega-card' : ''} ${isCompact ? 'compact-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''} ${isMine ? 'mine' : ''} ${selected ? 'selected' : ''}"
         style="left:${left}%;top:${top}%;width:${width}%;height:${height}%;"
         type="button"
         data-map-zone="${escapeHtml(name)}"
         aria-label="${escapeHtml(`${name} ${ownerMeta || progressMeta}`)}"
       >
         <span>${escapeHtml(name)}</span>
-        ${showOwner ? `<small>${escapeHtml(ownerMeta)}</small>` : ''}
+        ${showOwner ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : ''}
         ${showProgress ? `<small class="zone-status">${escapeHtml(progressMeta)}</small>` : ''}
+        <div class="zone-battle-bar" aria-hidden="true">
+          <i class="bar-502" style="width:${share502}%"></i>
+          <i class="bar-503" style="width:${share503}%"></i>
+        </div>
       </button>`;
   }).join('');
   overlay.querySelectorAll('[data-map-zone]').forEach(button => {

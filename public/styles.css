@@ -225,9 +225,11 @@ h1 {
 }
 
 .game-view {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .game-header {
@@ -290,6 +292,7 @@ h1 {
   gap: 14px;
   padding: 14px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .map-side {
@@ -343,11 +346,11 @@ h1 {
 .map-shell {
   position: relative;
   flex: 0 1 auto;
-  width: min(100%, calc((100vh - 190px) * 1243 / 888));
+  width: min(100%, calc((100dvh - 168px) * 1243 / 888));
   aspect-ratio: 1243 / 888;
   height: auto;
   min-height: 0;
-  max-height: calc(100vh - 190px);
+  max-height: calc(100dvh - 168px);
   overflow: hidden;
   border: 1px solid rgba(99, 102, 241, 0.28);
   border-radius: 8px;
@@ -396,7 +399,7 @@ h1 {
   place-items: center;
   grid-template-rows: 1fr auto;
   gap: 4px;
-  padding: 6px;
+  padding: 8px 7px 20px;
   border: 2px solid rgba(71, 85, 105, 0.78);
   border-radius: 6px;
   background: rgba(71, 85, 105, 0.42);
@@ -455,6 +458,15 @@ h1 {
   font-size: clamp(18px, 1.55vw, 26px);
 }
 
+.map-zone-card.compact-card {
+  padding: 6px 5px 18px;
+  font-size: clamp(16px, 1.35vw, 24px);
+}
+
+.map-zone-card.compact-card span {
+  line-height: 1.05;
+}
+
 .map-zone-card.room-card {
   font-size: clamp(9px, 0.82vw, 12px);
 }
@@ -470,6 +482,21 @@ h1 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.map-zone-card .zone-owner-name {
+  display: block;
+  max-width: 92%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-size: clamp(11px, 0.95vw, 15px);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.18);
+}
+
+.map-zone-card.compact-card .zone-owner-name {
+  max-width: 88%;
+  padding: 2px 5px;
+  font-size: clamp(10px, 0.88vw, 13px);
 }
 
 .map-zone-card.road-card small {
@@ -489,6 +516,41 @@ h1 {
 .map-zone-card.owner-503 .zone-status {
   background: rgba(255, 255, 255, 0.96);
   color: #0f172a;
+}
+
+.zone-battle-bar {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 7px;
+  height: 10px;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.42);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
+}
+
+.compact-card .zone-battle-bar {
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  height: 9px;
+}
+
+.zone-battle-bar i {
+  display: block;
+  min-width: 0;
+  transition: width 0.2s ease;
+}
+
+.zone-battle-bar .bar-502 {
+  background: linear-gradient(90deg, #1d4ed8, #60a5fa);
+}
+
+.zone-battle-bar .bar-503 {
+  background: linear-gradient(90deg, #f87171, #dc2626);
 }
 
 .map-shell::after {
@@ -648,6 +710,10 @@ h1 {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 2px;
+  overscroll-behavior: contain;
 }
 
 .target-box,
