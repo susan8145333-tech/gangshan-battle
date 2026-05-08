@@ -560,7 +560,7 @@ function renderHtmlMapOverlay() {
     const progressMeta = `502 ${share502}%｜503 ${share503}%`;
     const isCompact = zone.w < 130 || zone.h < 120;
     const showOwner = Boolean(ownerMeta);
-    const showProgress = selected && !showOwner && !isCompact;
+    const showProgress = false;
     return `
       <button
         class="map-zone-card ${isRoom ? 'room-card' : ''} ${isRoad ? 'road-card' : ''} ${isMega ? 'mega-card' : ''} ${isCompact ? 'compact-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''} ${isMine ? 'mine' : ''} ${selected ? 'selected' : ''}"
