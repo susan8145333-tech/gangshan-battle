@@ -554,11 +554,10 @@ function renderHtmlMapOverlay() {
     const width = (zone.w / 1243) * 100;
     const height = (zone.h / 888) * 100;
     const ownerMeta = ownerClass ? `${ownerClass} ${territory.ownerStudentName || ''}`.trim() : '';
-    const progressMeta = ownerClass
-      ? ownerClass === state.student?.classNum
-        ? `血量 ${territory.hp}/${territory.maxHp}`
-        : `攻破 ${territory.maxHp - territory.hp}/${territory.maxHp}`
-      : `502 ${territory.progress['502']}/${territory.maxHp}｜503 ${territory.progress['503']}/${territory.maxHp}`;
+    const total = (territory.progress?.['502'] || 0) + (territory.progress?.['503'] || 0);
+    const share502 = total ? Math.round(((territory.progress?.['502'] || 0) / total) * 100) : 0;
+    const share503 = total ? 100 - share502 : 0;
+    const progressMeta = `502 ${share502}%｜503 ${share503}%`;
     const showOwner = Boolean(ownerMeta);
     const showProgress = selected && !showOwner;
     return `
@@ -592,21 +591,9 @@ function renderProgress(svg, territory, zone) {
     fill: 'rgba(15, 23, 42, 0.55)',
   }));
 
-  if (territory.ownerClass) {
-    const hpWidth = Math.max(0, (territory.hp / territory.maxHp) * barWidth);
-    svg.appendChild(svgEl('rect', {
-      x: zone.x + 8,
-      y: barY,
-      width: hpWidth,
-      height: 9,
-      rx: 4,
-      fill: '#f8fafc',
-    }));
-    return;
-  }
-
-  const p502 = Math.max(0, (territory.progress['502'] / territory.maxHp) * barWidth);
-  const p503 = Math.max(0, (territory.progress['503'] / territory.maxHp) * barWidth);
+  const total = (territory.progress?.['502'] || 0) + (territory.progress?.['503'] || 0);
+  const p502 = total ? Math.max(0, ((territory.progress['502'] || 0) / total) * barWidth) : 0;
+  const p503 = total ? Math.max(0, ((territory.progress['503'] || 0) / total) * barWidth) : 0;
   svg.appendChild(svgEl('rect', {
     x: zone.x + 8,
     y: barY,
@@ -662,14 +649,17 @@ function renderTargetInfo() {
     return;
   }
 
+  const p502 = territory.progress?.['502'] || 0;
+  const p503 = territory.progress?.['503'] || 0;
+  const total = p502 + p503;
+  const share502 = total ? Math.round((p502 / total) * 100) : 0;
+  const share503 = total ? 100 - share502 : 0;
+
   if (territory.ownerClass) {
-    const attackProgress = territory.ownerClass === state.student?.classNum
-      ? `己方血量 ${territory.hp}/${territory.maxHp}`
-      : `你方攻破進度 ${territory.maxHp - territory.hp}/${territory.maxHp}`;
-    owner.textContent = `目前：${territory.ownerClass} ${territory.ownerStudentName || ''} 守擂中 · ${attackProgress}`;
+    owner.textContent = `目前：${territory.ownerClass} ${territory.ownerStudentName || ''} 領先 · 502 ${share502}% / 503 ${share503}%`;
     owner.className = `target-owner owner-${territory.ownerClass}`;
   } else {
-    owner.textContent = `尚未佔領 · 502 ${territory.progress['502']}/${territory.maxHp} · 503 ${territory.progress['503']}/${territory.maxHp}`;
+    owner.textContent = `尚未領先 · 502 ${p502}/${territory.maxHp} · 503 ${p503}/${territory.maxHp}`;
     owner.className = 'target-owner';
   }
   power.textContent = territoryEffectText(territory.name) || territory.power || '答題成功就能推進。';

@@ -497,6 +497,7 @@ function makeTerritory(t) {
     hp: 0,
     maxHp: t.maxHp,
     progress: { '502': 0, '503': 0 },
+    contributors: {},
     shieldUntil: 0,
     lastEvent: '',
     power: t.power,
@@ -544,6 +545,48 @@ function restorableSnapshot(source = {}) {
   };
 }
 
+function topContributor(terr, classNum, students = gameData.students) {
+  return Object.entries(terr.contributors || {})
+    .map(([studentId, points]) => ({ student: students[studentId], points }))
+    .filter(row => row.student?.classNum === classNum && row.points > 0)
+    .sort((a, b) => b.points - a.points || (b.student.score || 0) - (a.student.score || 0))[0] || null;
+}
+
+function refreshTerritoryLeader(terr, students = gameData.students) {
+  const p502 = Math.max(0, terr.progress?.['502'] || 0);
+  const p503 = Math.max(0, terr.progress?.['503'] || 0);
+  terr.progress = { '502': p502, '503': p503 };
+  let ownerClass = null;
+  if (p502 > p503) ownerClass = '502';
+  if (p503 > p502) ownerClass = '503';
+  if (p502 === p503 && p502 > 0 && ['502', '503'].includes(terr.ownerClass)) ownerClass = terr.ownerClass;
+
+  terr.ownerClass = ownerClass;
+  if (!ownerClass) {
+    terr.ownerStudentId = null;
+    terr.ownerStudentName = '';
+    terr.hp = 0;
+    return;
+  }
+  const leader = topContributor(terr, ownerClass, students);
+  terr.ownerStudentId = leader?.student?.id || null;
+  terr.ownerStudentName = leader?.student?.name || '';
+  terr.hp = terr.progress[ownerClass];
+}
+
+function addTerritoryContribution(terr, student, amount) {
+  const classNum = student.classNum;
+  const enemy = otherClass(classNum);
+  const gain = Math.max(0, amount);
+  terr.progress[classNum] = Math.min(terr.maxHp, (terr.progress[classNum] || 0) + gain);
+  if (enemy) {
+    terr.progress[enemy] = Math.max(0, (terr.progress[enemy] || 0) - Math.ceil(gain / 2));
+  }
+  terr.contributors = terr.contributors || {};
+  terr.contributors[student.id] = Math.min(999, (terr.contributors[student.id] || 0) + gain);
+  refreshTerritoryLeader(terr);
+}
+
 function normalizeLoadedData(data) {
   data = restorableSnapshot(data || {});
   const fresh = initData();
@@ -571,10 +614,12 @@ function normalizeLoadedData(data) {
         '502': Math.min(old.progress?.['502'] || 0, terr.maxHp),
         '503': Math.min(old.progress?.['503'] || 0, terr.maxHp),
       },
+      contributors: old.contributors || {},
       hp: Math.min(old.hp || 0, terr.maxHp),
       shieldUntil: old.shieldUntil || 0,
       power: terr.power,
     };
+    refreshTerritoryLeader(data.territories[name], data.students);
   });
   Object.keys(data.territories).forEach(name => {
     if (!fresh.territories[name]) delete data.territories[name];
@@ -732,6 +777,14 @@ function questionById(id) {
 
 function otherClass(classNum) {
   return classNum === '502' ? '503' : '502';
+}
+
+function territoryShare(terr, classNum) {
+  const p502 = Math.max(0, terr.progress?.['502'] || 0);
+  const p503 = Math.max(0, terr.progress?.['503'] || 0);
+  const total = p502 + p503;
+  if (!total) return 0;
+  return Math.round(((terr.progress?.[classNum] || 0) / total) * 100);
 }
 
 function pushEvent(text, type = 'info') {
@@ -984,29 +1037,36 @@ function applyCorrectAnswer(student, territoryName) {
     card = `10 連勝補給：${cardName(streakCard)}`;
   }
 
-  if (terr.ownerClass === student.classNum) {
-    const repairAmount = attack + (role === 'engineer' ? 1 : 0);
-    terr.hp = Math.min(terr.maxHp, (terr.hp || 0) + repairAmount);
-    terr.lastEvent = `${student.classNum} ${student.name} 修復 +${repairAmount}`;
-  } else if (terr.ownerClass && terr.ownerClass !== student.classNum) {
-    if (terr.shieldUntil > now()) {
-      terr.lastEvent = `${terr.name} 有防護罩，攻擊被擋下`;
-      bonusScore -= 2;
-    } else {
-      terr.hp -= attack;
-      terr.lastEvent = `${student.classNum} ${student.name} 攻擊 -${attack}`;
-      if (terr.hp <= 0) {
-        captureTerritory(terr, student, true);
-        captured = true;
-      }
-    }
+  const previousOwnerClass = terr.ownerClass;
+  const previousOwnerStudentId = terr.ownerStudentId;
+  const activeBefore = new Set(activeLineBonuses(student.classNum).map(bonus => bonus.id));
+  if (terr.ownerClass && terr.ownerClass !== student.classNum && terr.shieldUntil > now()) {
+    terr.lastEvent = `${terr.name} 有防護罩，這次推進被擋下`;
+    bonusScore -= 2;
   } else {
-    terr.progress[student.classNum] += attack;
-    terr.progress[otherClass(student.classNum)] = Math.max(0, terr.progress[otherClass(student.classNum)] - 1);
-    terr.lastEvent = `${student.classNum} ${student.name} 推進 +${attack}`;
-    if (terr.progress[student.classNum] >= terr.maxHp) {
-      captureTerritory(terr, student, false);
-      captured = true;
+    addTerritoryContribution(terr, student, attack);
+    const myShare = territoryShare(terr, student.classNum);
+    terr.lastEvent = `${student.classNum} ${student.name} 貢獻 +${attack}，佔比 ${myShare}%`;
+    captured = previousOwnerClass !== terr.ownerClass || previousOwnerStudentId !== terr.ownerStudentId;
+    if (previousOwnerClass !== terr.ownerClass && terr.ownerClass === student.classNum) {
+      student.score += previousOwnerClass ? 25 : 20;
+      terr.shieldUntil = normalizeRole(student.role) === 'guardian' ? now() + 120 * 1000 : terr.shieldUntil;
+      pushEvent(`${student.classNum} ${student.name} 讓 ${terr.name} 轉為 ${student.classNum} 領先！`, 'capture');
+    } else if (previousOwnerStudentId !== terr.ownerStudentId && terr.ownerStudentId === student.id) {
+      student.score += 8;
+      pushEvent(`${student.classNum} ${student.name} 成為 ${terr.name} 樓主！`, 'capture');
+    }
+    activeLineBonuses(student.classNum)
+      .filter(bonus => !activeBefore.has(bonus.id))
+      .forEach(bonus => {
+        student.score += 15;
+        student.coins += 5;
+        addCard(student, randomCardType());
+        pushEvent(`${student.classNum} 完成「${bonus.name}」連線！全班啟動：${bonus.effect}，${student.name} 獲得補給。`, 'capture');
+      });
+    if (terr.ownerStudentId === student.id) {
+      coins += 1;
+      card = card || '樓主獎勵';
     }
   }
 
@@ -1034,15 +1094,15 @@ function applyCorrectAnswer(student, territoryName) {
 
 function captureTerritory(terr, student, fromEnemy) {
   const activeBefore = new Set(activeLineBonuses(student.classNum).map(bonus => bonus.id));
-  terr.ownerClass = student.classNum;
-  terr.ownerStudentId = student.id;
-  terr.ownerStudentName = student.name;
-  terr.hp = terr.maxHp;
-  terr.progress = { '502': 0, '503': 0 };
+  terr.progress[student.classNum] = terr.maxHp;
+  terr.progress[otherClass(student.classNum)] = 0;
+  terr.contributors = terr.contributors || {};
+  terr.contributors[student.id] = Math.max(terr.contributors[student.id] || 0, terr.maxHp);
+  refreshTerritoryLeader(terr);
   terr.shieldUntil = normalizeRole(student.role) === 'guardian' ? now() + 120 * 1000 : 0;
   student.score += fromEnemy ? 25 : 20;
-  terr.lastEvent = `${student.classNum} 佔領成功`;
-  pushEvent(`${student.classNum} ${student.name} 成為 ${terr.name} 守擂者！${normalizeRole(student.role) === 'guardian' ? '守衛防護啟動。' : ''}`, 'capture');
+  terr.lastEvent = `${student.classNum} 取得 100% 佔比`;
+  pushEvent(`${student.classNum} ${student.name} 成為 ${terr.name} 樓主！${normalizeRole(student.role) === 'guardian' ? '守衛防護啟動。' : ''}`, 'capture');
   activeLineBonuses(student.classNum)
     .filter(bonus => !activeBefore.has(bonus.id))
     .forEach(bonus => {
@@ -1055,11 +1115,12 @@ function captureTerritory(terr, student, fromEnemy) {
 
 function repairOwnedTerritory(classNum) {
   const owned = Object.values(gameData.territories)
-    .filter(t => t.ownerClass === classNum && t.hp < t.maxHp);
+    .filter(t => t.ownerClass === classNum && (t.progress[classNum] || 0) < t.maxHp);
   if (owned.length === 0) return;
   const terr = randomItem(owned);
-  terr.hp = Math.min(terr.maxHp, terr.hp + 2);
-  terr.lastEvent = `${classNum} 班修復 +2`;
+  terr.progress[classNum] = Math.min(terr.maxHp, (terr.progress[classNum] || 0) + 2);
+  refreshTerritoryLeader(terr);
+  terr.lastEvent = `${classNum} 班佔比 +2`;
 }
 
 function stealCoins(student) {
@@ -1092,6 +1153,7 @@ function neutralizeTerritory(terr) {
   terr.ownerStudentName = '';
   terr.hp = 0;
   terr.progress = { '502': 0, '503': 0 };
+  terr.contributors = {};
   terr.shieldUntil = 0;
 }
 
@@ -1140,15 +1202,13 @@ function useShopItem(student, item, targetStudentId, territoryName) {
       return { ok: true, message: `${target.name} 的 ${terr.name} 有防護罩，突襲被擋下。` };
     }
     student.coins -= cost;
-    terr.hp -= 3;
-    terr.lastEvent = `${student.name} 突襲 ${target.name} -3`;
-    if (terr.hp <= 0) {
-      neutralizeTerritory(terr);
-      pushEvent(`${student.classNum} ${student.name} 突襲成功，打掉了 ${target.name} 的 ${terr.name}！`, 'shop');
-      return { ok: true, message: `突襲成功！${target.name} 失去 ${terr.name}。` };
-    }
+    const targetClass = target.classNum;
+    terr.progress[targetClass] = Math.max(0, (terr.progress[targetClass] || 0) - 5);
+    terr.progress[student.classNum] = Math.min(terr.maxHp, (terr.progress[student.classNum] || 0) + 2);
+    refreshTerritoryLeader(terr);
+    terr.lastEvent = `${student.name} 突襲 ${target.name}`;
     pushEvent(`${student.classNum} ${student.name} 突襲 ${target.name} 的 ${terr.name}。`, 'shop');
-    return { ok: true, message: `${target.name} 的 ${terr.name} 受到突襲 -3。` };
+    return { ok: true, message: `${target.name} 的 ${terr.name} 佔比被突襲削弱。` };
   }
 
   return { ok: false, error: '道具使用失敗。' };
@@ -1180,20 +1240,23 @@ function useCardItem(student, item, targetStudentId, territoryName) {
 
   if (item === 'repair') {
     const candidates = Object.values(gameData.territories)
-      .filter(t => t.ownerClass === student.classNum && t.hp < t.maxHp);
+      .filter(t => t.ownerClass === student.classNum && (t.progress[student.classNum] || 0) < t.maxHp);
     if (candidates.length === 0) {
-      return { ok: false, error: '修復卡只能用在被攻擊、血量未滿的己方據點。現在己方據點都是滿血，所以卡會保留。' };
+      return { ok: false, error: '修復卡只能用在己方仍可提高佔比的據點。現在己方據點佔比都已滿，所以卡會保留。' };
     }
     const selected = gameData.territories[territoryName];
-    const terr = selected?.ownerClass === student.classNum && selected.hp < selected.maxHp
+    const terr = selected?.ownerClass === student.classNum && (selected.progress[student.classNum] || 0) < selected.maxHp
       ? gameData.territories[territoryName]
-      : candidates.sort((a, b) => a.hp - b.hp)[0];
+      : candidates.sort((a, b) => (a.progress[student.classNum] || 0) - (b.progress[student.classNum] || 0))[0];
     student.cards.repair -= 1;
     const amount = normalizeRole(student.role) === 'engineer' ? 6 : 4;
-    terr.hp = Math.min(terr.maxHp, terr.hp + amount);
-    terr.lastEvent = `${student.name} 使用修復卡 +${amount}`;
-    pushEvent(`${student.classNum} ${student.name} 修復了 ${terr.name}。`, 'shop');
-    return { ok: true, message: `${terr.name} 修復 +${amount}。` };
+    terr.progress[student.classNum] = Math.min(terr.maxHp, (terr.progress[student.classNum] || 0) + amount);
+    terr.contributors = terr.contributors || {};
+    terr.contributors[student.id] = (terr.contributors[student.id] || 0) + amount;
+    refreshTerritoryLeader(terr);
+    terr.lastEvent = `${student.name} 使用修復卡，佔比 +${amount}`;
+    pushEvent(`${student.classNum} ${student.name} 提高了 ${terr.name} 佔比。`, 'shop');
+    return { ok: true, message: `${terr.name} 佔比 +${amount}。` };
   }
 
   if (item === 'shield') {
@@ -1261,24 +1324,10 @@ function applyWrongAnswer(student, territoryName) {
   student.score = Math.max(0, (student.score || 0) - 3);
 
   if (terr) {
-    if (terr.ownerClass === student.classNum) {
-      terr.hp = Math.max(0, (terr.hp || 0) - 1);
-      terr.lastEvent = `${student.classNum} 答錯，土地受損 -1`;
-      if (terr.hp === 0) {
-        terr.ownerClass = null;
-        terr.ownerStudentId = null;
-        terr.ownerStudentName = '';
-        terr.progress = { '502': 0, '503': 0 };
-        pushEvent(`${terr.name} 變成無主土地。`, 'wrong');
-      }
-    } else if (!terr.ownerClass) {
-      terr.progress[student.classNum] = Math.max(0, terr.progress[student.classNum] - 1);
-      terr.progress[otherClass(student.classNum)] += 1;
-      terr.lastEvent = `${student.classNum} 答錯，${otherClass(student.classNum)} 班反推 +1`;
-    } else {
-      terr.hp = Math.min(terr.maxHp, (terr.hp || terr.maxHp) + 1);
-      terr.lastEvent = `${student.classNum} 答錯，守方恢復 +1`;
-    }
+    terr.progress[student.classNum] = Math.max(0, (terr.progress[student.classNum] || 0) - 1);
+    terr.progress[otherClass(student.classNum)] = Math.min(terr.maxHp, (terr.progress[otherClass(student.classNum)] || 0) + 1);
+    refreshTerritoryLeader(terr);
+    terr.lastEvent = `${student.classNum} 答錯，${otherClass(student.classNum)} 班佔比 +1`;
   }
 
   const message = `${student.name} 答錯，${territoryName || '目標土地'} 遭到反擊。`;
