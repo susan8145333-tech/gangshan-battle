@@ -707,7 +707,8 @@ async function toggleRecording() {
       stopStream();
       $('#recordButton').textContent = '重新錄音';
       $('#playRecordButton').disabled = false;
-      updateSpeechGate();
+      $('#recordHint').textContent = '正在確認英文關鍵字...';
+      setTimeout(updateSpeechGate, 650);
     };
 
     state.recorder.start();
@@ -780,21 +781,36 @@ function updateSpeechGate() {
   }
 
   const percent = Math.round(state.speechScore * 100);
-  if (state.speechScore >= 0.62) {
+  const threshold = speechThreshold(state.currentQuestion?.en || '');
+  if (state.speechScore >= threshold) {
     $('#submitButton').disabled = false;
     $('#recordHint').textContent = `英文辨識通過 ${percent}%。可以送出攻擊。`;
   } else {
     $('#submitButton').disabled = true;
-    $('#recordHint').textContent = `沒有聽到足夠的英文關鍵字（${percent}%）。請按「重新錄音」。`;
+    $('#recordHint').textContent = `英文關鍵字不足（${percent}%）。請慢一點再錄一次。`;
   }
 }
 
+function speechThreshold(expected) {
+  const wordCount = normalizeWords(expected).filter(word => word.length > 1).length;
+  if (wordCount >= 4) return 0.5;
+  if (wordCount === 3) return 0.55;
+  return 0.6;
+}
+
 function scoreSpeech(expected, heard) {
-  const expectedWords = normalizeWords(expected).filter(word => word.length > 1);
-  const heardWords = normalizeWords(heard);
+  const expectedWords = normalizeWords(expected).filter(word => word.length > 1).map(speechWordKey);
+  const heardWords = normalizeWords(heard).map(speechWordKey);
   if (expectedWords.length === 0 || heardWords.length === 0) return 0;
   const matched = expectedWords.filter(word => heardWords.includes(word)).length;
   return matched / expectedWords.length;
+}
+
+function speechWordKey(word) {
+  return String(word || '')
+    .replace(/ies$/, 'y')
+    .replace(/es$/, '')
+    .replace(/s$/, '');
 }
 
 function normalizeWords(text) {
