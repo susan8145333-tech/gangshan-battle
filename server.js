@@ -13,6 +13,9 @@ const DATA_DIR = process.env.GAME_DATA_DIR || path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'game.json');
 const STUDENT_AUDIO_DIR = path.join(DATA_DIR, 'student-audio');
 const PORT = process.env.PORT || 3000;
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_STATE_ID = process.env.SUPABASE_STATE_ID || 'main';
 
 const CLASSES = ['502', '503'];
 const CLASS_COLORS = {
@@ -555,6 +558,9 @@ function initData() {
 }
 
 let gameData = initData();
+let supabaseSaveTimer = null;
+let supabaseSaving = false;
+let supabaseDirty = false;
 
 function restorableSnapshot(source = {}) {
   return {
@@ -640,9 +646,87 @@ function load() {
   }
 }
 
-function save() {
+function saveLocal() {
   fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
   fs.writeFileSync(DATA_FILE, JSON.stringify(gameData, null, 2), 'utf8');
+}
+
+function supabaseEnabled() {
+  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+}
+
+async function supabaseRequest(pathname, options = {}) {
+  const headers = {
+    apikey: SUPABASE_SERVICE_ROLE_KEY,
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+  return fetch(`${SUPABASE_URL}/rest/v1/${pathname}`, {
+    ...options,
+    headers,
+  });
+}
+
+async function loadFromSupabase() {
+  if (!supabaseEnabled()) return false;
+  const id = encodeURIComponent(SUPABASE_STATE_ID);
+  const res = await supabaseRequest(`game_state?id=eq.${id}&select=data`, { method: 'GET' });
+  if (!res.ok) {
+    throw new Error(`Supabase 讀取失敗：HTTP ${res.status} ${await res.text()}`);
+  }
+  const rows = await res.json();
+  if (!rows[0]?.data) return false;
+  gameData = normalizeLoadedData(rows[0].data);
+  return true;
+}
+
+async function saveToSupabaseNow() {
+  if (!supabaseEnabled()) return;
+  const res = await supabaseRequest('game_state', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates' },
+    body: JSON.stringify({
+      id: SUPABASE_STATE_ID,
+      data: restorableSnapshot(gameData),
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Supabase 儲存失敗：HTTP ${res.status} ${await res.text()}`);
+  }
+}
+
+async function flushSupabaseSave() {
+  supabaseSaveTimer = null;
+  if (!supabaseEnabled() || supabaseSaving || !supabaseDirty) return;
+  supabaseSaving = true;
+  supabaseDirty = false;
+  try {
+    await saveToSupabaseNow();
+  } catch (err) {
+    console.log(err.message || err);
+    supabaseDirty = true;
+    supabaseSaveTimer = setTimeout(flushSupabaseSave, 5000);
+  } finally {
+    supabaseSaving = false;
+    if (supabaseDirty && !supabaseSaveTimer) {
+      supabaseSaveTimer = setTimeout(flushSupabaseSave, 500);
+    }
+  }
+}
+
+function scheduleSupabaseSave() {
+  if (!supabaseEnabled()) return;
+  supabaseDirty = true;
+  if (!supabaseSaveTimer) {
+    supabaseSaveTimer = setTimeout(flushSupabaseSave, 500);
+  }
+}
+
+function save() {
+  saveLocal();
+  scheduleSupabaseSave();
 }
 
 function publicState() {
@@ -1363,14 +1447,18 @@ function exportWorkbookHtml() {
   </body></html>`;
 }
 
-load();
-save();
-fs.mkdirSync(STUDENT_AUDIO_DIR, { recursive: true });
-
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/state', (req, res) => res.json(publicState()));
+
+app.get('/api/storage', (req, res) => {
+  res.json({
+    mode: supabaseEnabled() ? 'supabase' : 'local-file',
+    supabaseConfigured: supabaseEnabled(),
+    stateId: SUPABASE_STATE_ID,
+  });
+});
 
 app.get('/api/teacher/backup.json', (req, res) => {
   const filename = `岡山大作戰備份-${new Date().toISOString().slice(0, 10)}.json`;
@@ -1644,18 +1732,48 @@ wss.on('connection', ws => {
   ws.send(JSON.stringify({ type: 'state', data: publicState() }));
 });
 
-server.listen(PORT, '0.0.0.0', () => {
-  let localIP = 'localhost';
-  for (const iface of Object.values(os.networkInterfaces())) {
-    for (const net of iface || []) {
-      if (net.family === 'IPv4' && !net.internal) {
-        localIP = net.address;
-        break;
+async function start() {
+  load();
+  if (supabaseEnabled()) {
+    try {
+      const remoteLoaded = await loadFromSupabase();
+      if (remoteLoaded) {
+        saveLocal();
+        console.log('已從 Supabase 載入遊戲資料。');
+      } else {
+        save();
+        await flushSupabaseSave();
+        console.log('Supabase 尚無遊戲資料，已建立第一份狀態。');
+      }
+    } catch (err) {
+      console.log(err.message || err);
+      console.log('Supabase 暫時不可用，先使用本機資料啟動。');
+      save();
+    }
+  } else {
+    save();
+  }
+  fs.mkdirSync(STUDENT_AUDIO_DIR, { recursive: true });
+
+  server.listen(PORT, '0.0.0.0', () => {
+    let localIP = 'localhost';
+    for (const iface of Object.values(os.networkInterfaces())) {
+      for (const net of iface || []) {
+        if (net.family === 'IPv4' && !net.internal) {
+          localIP = net.address;
+          break;
+        }
       }
     }
-  }
-  console.log('\n岡山大作戰 已啟動');
-  console.log(`學生連線: http://${localIP}:${PORT}`);
-  console.log(`教師後台: http://${localIP}:${PORT}/teacher.html`);
-  console.log('按 Ctrl+C 停止伺服器\n');
+    console.log('\n岡山大作戰 已啟動');
+    console.log(`學生連線: http://${localIP}:${PORT}`);
+    console.log(`教師後台: http://${localIP}:${PORT}/teacher.html`);
+    console.log(`資料儲存: ${supabaseEnabled() ? 'Supabase' : '本機檔案'}`);
+    console.log('按 Ctrl+C 停止伺服器\n');
+  });
+}
+
+start().catch(err => {
+  console.error(err);
+  process.exit(1);
 });
