@@ -295,11 +295,13 @@ h1 {
 .map-side {
   display: flex;
   flex-direction: column;
+  align-items: center;
   min-width: 0;
   min-height: 0;
 }
 
 .class-scoreboard {
+  width: 100%;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
@@ -340,7 +342,8 @@ h1 {
 
 .map-shell {
   position: relative;
-  flex: 1;
+  flex: 0 1 auto;
+  width: min(100%, calc((100vh - 190px) * 1243 / 888));
   aspect-ratio: 1243 / 888;
   height: auto;
   min-height: 0;
