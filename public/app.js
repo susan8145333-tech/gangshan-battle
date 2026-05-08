@@ -968,7 +968,9 @@ async function useShopItem(item) {
     });
     const payload = await res.json();
     if (!res.ok) {
-      $('#shopHint').textContent = payload.error || '道具使用失敗。';
+      const message = payload.error || '道具使用失敗。';
+      $('#shopHint').textContent = message;
+      showActionError('道具不能使用', message);
       return;
     }
     state.student = payload.student;
@@ -979,6 +981,7 @@ async function useShopItem(item) {
     showShopReward(item, payload.result.message);
   } catch (error) {
     $('#shopHint').textContent = '連線失敗，請稍後再試。';
+    showActionError('連線失敗', '請稍後再試。');
   }
 }
 
@@ -998,7 +1001,9 @@ async function useCardItem(item) {
     });
     const payload = await res.json();
     if (!res.ok) {
-      $('#shopHint').textContent = payload.error || '卡牌使用失敗。';
+      const message = payload.error || '卡牌使用失敗。';
+      $('#shopHint').textContent = message;
+      showActionError(cardLabel(item), message);
       return;
     }
     state.student = payload.student;
@@ -1009,13 +1014,21 @@ async function useCardItem(item) {
     showShopReward(item, payload.result.message);
   } catch (error) {
     $('#shopHint').textContent = '連線失敗，請稍後再試。';
+    showActionError('連線失敗', '請稍後再試。');
   }
+}
+
+function showActionError(title, message) {
+  $('#rewardKicker').textContent = '使用條件';
+  $('#rewardTitle').textContent = title;
+  $('#rewardBody').innerHTML = `<div class="reward-line">${escapeHtml(message)}</div>`;
+  $('#rewardModal').hidden = false;
 }
 
 function showCardHelp(item) {
   const help = {
     boost: '重擊卡：使用後，下一次答對攻擊 +2。',
-    repair: '修復卡：修復己方受損據點。若目前選到己方據點，會優先修那一塊。',
+    repair: '修復卡：只能修血量未滿的己方據點。若全部據點都滿血，卡會保留。',
     shield: '防護罩卡：請先點選己方已佔領土地，使用後保護 90 秒。',
     steal: '偷金幣卡：先在「選擇同學」選目標，再使用，最多偷 5 金幣。',
     freeze: '干擾卡：先選同學再使用，對方下一次答對時攻擊 -1。',

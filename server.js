@@ -708,8 +708,11 @@ function useCardItem(student, item, targetStudentId, territoryName) {
   if (item === 'repair') {
     const candidates = Object.values(gameData.territories)
       .filter(t => t.ownerClass === student.classNum && t.hp < t.maxHp);
-    if (candidates.length === 0) return { ok: false, error: '目前沒有需要修復的己方據點。' };
-    const terr = territoryName && gameData.territories[territoryName]?.ownerClass === student.classNum
+    if (candidates.length === 0) {
+      return { ok: false, error: '修復卡只能用在被攻擊、血量未滿的己方據點。現在己方據點都是滿血，所以卡會保留。' };
+    }
+    const selected = gameData.territories[territoryName];
+    const terr = selected?.ownerClass === student.classNum && selected.hp < selected.maxHp
       ? gameData.territories[territoryName]
       : candidates.sort((a, b) => a.hp - b.hp)[0];
     student.cards.repair -= 1;
