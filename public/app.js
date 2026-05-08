@@ -54,7 +54,7 @@ const state = {
   student: null,
   data: null,
   questions: [],
-  trialLevel: ['classroom', 'festival'].includes(pageParams.get('trialLevel')) ? pageParams.get('trialLevel') : '',
+  trialLevel: ['classroom', 'festival', 'phonics'].includes(pageParams.get('trialLevel')) ? pageParams.get('trialLevel') : '',
   target: '',
   currentQuestion: null,
   questionNumber: 0,
@@ -279,32 +279,51 @@ function roleInfo(role) {
 function getLevelInfo(student) {
   const questions = state.questions || [];
   const stats = student.questionStats || {};
-  const ids = questions.filter(q => q.level === 'classroom').map(q => q.id);
-  const answered = ids.filter(id => (stats[id]?.attempts || 0) > 0).length;
-  const attempts = ids.reduce((sum, id) => sum + (stats[id]?.attempts || 0), 0);
-  const correct = ids.reduce((sum, id) => sum + (stats[id]?.correct || 0), 0);
-  const accuracy = attempts ? correct / attempts : 0;
-  const festivalUnlocked = ids.length > 0 && answered >= ids.length && accuracy >= 0.9;
-  if (student.manualLevel === 'festival') {
+  const summary = level => {
+    const ids = questions.filter(q => q.level === level).map(q => q.id);
+    const answered = ids.filter(id => (stats[id]?.attempts || 0) > 0).length;
+    const attempts = ids.reduce((sum, id) => sum + (stats[id]?.attempts || 0), 0);
+    const correct = ids.reduce((sum, id) => sum + (stats[id]?.correct || 0), 0);
+    const accuracy = attempts ? correct / attempts : 0;
+    return { level, total: ids.length, answered, attempts, correct, accuracy };
+  };
+  const levelTitle = level => ({
+    classroom: '第一關 課室英語',
+    festival: '第二關 節慶英語',
+    phonics: '第三關 Phonics 聽力',
+  }[level] || '自訂關卡');
+  const classroom = summary('classroom');
+  const festival = summary('festival');
+  const manualLevel = ['festival', 'phonics'].includes(student.manualLevel) ? student.manualLevel : '';
+  const festivalUnlocked = manualLevel === 'festival'
+    || manualLevel === 'phonics'
+    || (classroom.total > 0 && classroom.answered >= classroom.total && classroom.accuracy >= 0.9);
+  const phonicsUnlocked = manualLevel === 'phonics'
+    || (festivalUnlocked && festival.total > 0 && festival.answered >= festival.total && festival.accuracy >= 0.9);
+  const currentLevel = phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
+  if (manualLevel) {
     return {
-      currentLevel: 'festival',
-      currentLevelName: '第二關 節慶英語（老師開啟）',
-      classroom: { total: ids.length, answered, attempts, correct, accuracy },
+      currentLevel,
+      currentLevelName: `${levelTitle(currentLevel)}（老師開啟）`,
+      classroom,
+      festival,
       manualMode: true,
     };
   }
-  if (state.trialLevel === 'festival') {
+  if (state.trialLevel) {
     return {
-      currentLevel: 'festival',
-      currentLevelName: '老師試玩 第二關 節慶英語',
-      classroom: { total: ids.length, answered, attempts, correct, accuracy },
+      currentLevel: state.trialLevel,
+      currentLevelName: `老師試玩 ${levelTitle(state.trialLevel)}`,
+      classroom,
+      festival,
       trialMode: true,
     };
   }
   return {
-    currentLevel: festivalUnlocked ? 'festival' : 'classroom',
-    currentLevelName: festivalUnlocked ? '第二關 節慶英語' : '第一關 課室英語',
-    classroom: { total: ids.length, answered, attempts, correct, accuracy },
+    currentLevel,
+    currentLevelName: levelTitle(currentLevel),
+    classroom,
+    festival,
   };
 }
 
@@ -315,8 +334,9 @@ function myLevelInfo() {
 function currentAttackPower() {
   const info = myLevelInfo();
   const ownsField = state.data?.territories?.['操場']?.ownerClass === state.student?.classNum;
+  const levelBonus = info?.currentLevel === 'phonics' ? 2 : info?.currentLevel === 'festival' ? 1 : 0;
   return 1
-    + (info?.currentLevel === 'festival' ? 1 : 0)
+    + levelBonus
     + (state.student?.role === 'warrior' ? 1 : 0)
     + (ownsField ? 1 : 0)
     + (state.student?.powerUps?.boost || 0);
@@ -327,12 +347,13 @@ function renderLevel() {
   if (!info || !$('#levelBadge')) return;
   const c = info.classroom;
   const pct = Math.round((c.accuracy || 0) * 100);
+  const levelBonus = info.currentLevel === 'phonics' ? 2 : info.currentLevel === 'festival' ? 1 : 0;
   $('#levelBadge').textContent = info.trialMode
-    ? '老師試玩 第二關 節慶英語 · 攻擊 +1'
+    ? `${info.currentLevelName} · 攻擊 +${levelBonus}`
     : info.manualMode
-    ? '老師已開啟 第二關 節慶英語 · 攻擊 +1'
-    : info.currentLevel === 'festival'
-    ? '第二關 節慶英語 · 攻擊 +1'
+    ? `${info.currentLevelName} · 攻擊 +${levelBonus}`
+    : info.currentLevel !== 'classroom'
+    ? `${info.currentLevelName} · 攻擊 +${levelBonus}`
     : `第一關 課室英語 · ${c.answered}/${c.total} · ${pct}%`;
 }
 
@@ -656,19 +677,26 @@ function itemCost(item) {
 
 function startQuestion() {
   const q = pickQuestion();
+  const isListening = q.mode === 'listening';
   resetRecording();
   $('#questionCard').hidden = false;
   $('#recordCard').hidden = true;
   $('#nextButton').hidden = true;
   $('#questionCount').textContent = `第 ${state.questionNumber} 題`;
-  $('#englishText').textContent = q.en;
-  $('#recordPrompt').textContent = `${q.en} ${q.zh}`;
-  setResult('選出正確中文，答對後再錄音。');
+  $('#englishText').textContent = isListening ? (q.prompt || '聽音，選出正確答案。') : q.en;
+  $('#recordPrompt').textContent = isListening ? '' : `${q.en} ${q.zh}`;
+  setResult(isListening ? '先聽聲音，再選出正確答案。' : '選出正確中文，答對後再錄音。');
 
-  const sameLevel = state.questions.filter(item => item.level === q.level && item.id !== q.id);
-  const wrongPool = sameLevel.length >= 3 ? sameLevel : state.questions.filter(item => item.id !== q.id);
-  const wrongOptions = shuffle(wrongPool).slice(0, 3).map(item => item.zh);
-  const options = shuffle([q.zh, ...wrongOptions]);
+  let options = Array.isArray(q.options) && q.options.length
+    ? q.options
+    : null;
+  if (!options) {
+    const sameLevel = state.questions.filter(item => item.level === q.level && item.id !== q.id);
+    const wrongPool = sameLevel.length >= 3 ? sameLevel : state.questions.filter(item => item.id !== q.id);
+    const wrongOptions = shuffle(wrongPool).slice(0, 3).map(item => item.zh);
+    options = [q.zh, ...wrongOptions];
+  }
+  options = shuffle(Array.from(new Set([q.zh, ...options])));
   $('#options').innerHTML = options.map((option, index) => `
     <button class="option-button" type="button" data-option="${escapeHtml(option)}">
       ${String.fromCharCode(65 + index)}. ${escapeHtml(option)}
@@ -678,7 +706,7 @@ function startQuestion() {
   $$('.option-button').forEach(button => {
     button.addEventListener('click', () => chooseAnswer(button.dataset.option, button));
   });
-  speakEnglish(q.en);
+  speakEnglish(q.speak || q.en);
 }
 
 function chooseAnswer(chosen, button) {
@@ -700,6 +728,13 @@ function chooseAnswer(chosen, button) {
 
   playSound('correct');
   button.classList.add('correct');
+  if (q.mode === 'listening') {
+    setResult('答對了，送出攻擊。', 'good');
+    submitAnswer(chosen).then(() => {
+      $('#nextButton').hidden = false;
+    });
+    return;
+  }
   setResult('答對了。請錄音唸出英文和中文，再送出攻擊。', 'good');
   $('#recordCard').hidden = false;
 }
@@ -1139,7 +1174,7 @@ $('#nameInput').addEventListener('keydown', event => {
   if (event.key === 'Enter') login();
 });
 $('#speakButton').addEventListener('click', () => {
-  if (state.currentQuestion) speakEnglish(state.currentQuestion.en);
+  if (state.currentQuestion) speakEnglish(state.currentQuestion.speak || state.currentQuestion.en);
 });
 $('#recordButton').addEventListener('click', toggleRecording);
 $('#playRecordButton').addEventListener('click', playRecording);

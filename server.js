@@ -103,11 +103,13 @@ const QUESTIONS = [
   { id: 'f33', en: 'ghost', zh: '鬼' },
   { id: 'f34', en: 'vampire', zh: '吸血鬼' },
   { id: 'f35', en: 'candy', zh: '糖果' },
-].map(q => ({ ...q, level: 'festival', levelName: '第二關 節慶英語' })));
+].map(q => ({ ...q, level: 'festival', levelName: '第二關 節慶英語' })))
+  .concat(buildPhonicsQuestions());
 
 const LEVELS = [
   { id: 'classroom', name: '第一關 課室英語', order: 1 },
   { id: 'festival', name: '第二關 節慶英語', order: 2 },
+  { id: 'phonics', name: '第三關 Phonics 聽力', order: 3 },
 ];
 
 const ROLES = {
@@ -125,13 +127,121 @@ function levelName(level) {
 
 function normalizeQuestion(raw) {
   const level = LEVELS.some(item => item.id === raw.level) ? raw.level : 'classroom';
-  return {
+  const question = {
     id: String(raw.id || '').trim(),
     en: String(raw.en || '').trim(),
     zh: String(raw.zh || '').trim(),
     level,
     levelName: levelName(level),
   };
+  if (raw.mode) question.mode = String(raw.mode || '').trim();
+  if (raw.prompt) question.prompt = String(raw.prompt || '').trim();
+  if (raw.speak) question.speak = String(raw.speak || '').trim();
+  if (raw.skill) question.skill = String(raw.skill || '').trim();
+  if (Array.isArray(raw.options)) {
+    question.options = raw.options.map(option => String(option || '').trim()).filter(Boolean);
+  }
+  return question;
+}
+
+function buildPhonicsQuestions() {
+  const questions = [];
+  const phonicsLevelName = '第三關 Phonics 聽力';
+  const listeningPrompt = '聽音，選出你聽到的答案。';
+
+  const addListeningSet = (prefix, options, prompt = listeningPrompt, speakMap = {}) => {
+    options.forEach((answer, index) => {
+      questions.push({
+        id: `${prefix}${String(index + 1).padStart(2, '0')}`,
+        en: speakMap[answer] || answer,
+        zh: answer,
+        speak: speakMap[answer] || answer,
+        prompt,
+        options,
+        mode: 'listening',
+        level: 'phonics',
+        levelName: phonicsLevelName,
+      });
+    });
+  };
+
+  addListeningSet('ph-letter-b-', ['p', 'b', 'd', 't'], '聽音，選出正確字母。');
+  addListeningSet('ph-letter-n-', ['m', 'h', 'n', 'r'], '聽音，選出正確字母。');
+  addListeningSet('ph-letter-g-', ['j', 'k', 'g', 'c'], '聽音，選出正確字母。');
+  addListeningSet('ph-digraph-sh-', ['th', 'ch', 'sh', 'ph'], '聽音，選出正確字母組合。');
+  addListeningSet('ph-digraph-ph-', ['sh', 'ch', 'th', 'ph'], '聽音，選出正確字母組合。');
+
+  [
+    ['ph-vowel-a-', ['hat', 'hate', 'hit', 'hot', 'map']],
+    ['ph-vowel-i-', ['bike', 'bit', 'bite', 'bat', 'bet']],
+    ['ph-vowel-u-', ['cup', 'cap', 'cop', 'bug', 'cope']],
+    ['ph-vowel-e-', ['bed', 'bad', 'bid', 'red', 'ride']],
+    ['ph-vowel-pin-', ['pin', 'pine', 'pan', 'pen', 'bin']],
+    ['ph-vowel-o-', ['hop', 'hope', 'hug', 'hap', 'dog']],
+    ['ph-vowel-ae-', ['make', 'back', 'neck', 'game', 'pick']],
+    ['ph-vowel-ee-', ['see', 'sin', 'sun', 'son', 'team']],
+  ].forEach(([prefix, options]) => {
+    addListeningSet(prefix, options, '聽單字，選出你聽到的單字。');
+  });
+
+  [
+    ['ph-spell-01', 'stomach', ['stomack', 'stomatch', 'stomach', 'stomech']],
+    ['ph-spell-02', 'Tuesday', ['Tuseday', 'Tusday', 'Thursday', 'Tuesday']],
+    ['ph-spell-03', 'Halloween', ['Halloeen', 'Haloween', 'Halloween', 'Hallween']],
+    ['ph-spell-04', 'pumpkin', ['pumkin', 'pumpkin', 'pumkine', 'pampkin']],
+    ['ph-spell-05', 'Christmas', ['Chrismas', 'Cristmas', 'Chritmas', 'Christmas']],
+    ['ph-spell-06', 'library', ['libary', 'libarary', 'library', 'liberry']],
+    ['ph-spell-07', 'umbrella', ['unbrella', 'umbrella', 'umbralla', 'umbrela']],
+    ['ph-spell-08', 'stomachache', ['stomakache', 'stomachake', 'stomachace', 'stomachache']],
+  ].forEach(([id, answer, options]) => {
+    questions.push({
+      id,
+      en: answer,
+      zh: answer,
+      speak: answer,
+      prompt: '聽單字，選出正確拼法。',
+      options,
+      mode: 'listening',
+      level: 'phonics',
+      levelName: phonicsLevelName,
+    });
+  });
+
+  [
+    ['ph-number-13-', [['30', 'thirty'], ['3', 'three'], ['13', 'thirteen'], ['300', 'three hundred']]],
+    ['ph-number-80-', [['8', 'eight'], ['18', 'eighteen'], ['800', 'eight hundred'], ['80', 'eighty']]],
+    ['ph-number-15-', [['50', 'fifty'], ['15', 'fifteen'], ['5', 'five'], ['500', 'five hundred']]],
+    ['ph-number-90-', [['9', 'nine'], ['19', 'nineteen'], ['90', 'ninety'], ['900', 'nine hundred']]],
+  ].forEach(([prefix, pairs]) => {
+    const options = pairs.map(([answer]) => answer);
+    pairs.forEach(([answer, speak], index) => {
+      questions.push({
+        id: `${prefix}${String(index + 1).padStart(2, '0')}`,
+        en: speak,
+        zh: answer,
+        speak,
+        prompt: '聽數字，選出正確答案。',
+        options,
+        mode: 'listening',
+        level: 'phonics',
+        levelName: phonicsLevelName,
+      });
+    });
+  });
+
+  questions.push({
+    id: 'ph-meaning-thirsty',
+    en: 'thirsty',
+    zh: '口渴',
+    speak: 'thirsty',
+    prompt: '聽單字，選出正確意思。',
+    options: ['三十', '口渴', '星期四', '十三'],
+    mode: 'listening',
+    level: 'phonics',
+    levelName: phonicsLevelName,
+  });
+
+  return questions;
 }
 
 function allQuestions() {
@@ -390,23 +500,39 @@ function levelSummary(student, level = 'classroom') {
 
 function studentLevelInfo(student) {
   const classroom = levelSummary(student, 'classroom');
-  const manualFestival = student.manualLevel === 'festival';
-  const festivalUnlocked = manualFestival || (classroom.answered >= classroom.total && classroom.accuracy >= 0.9);
-  const currentLevel = festivalUnlocked ? 'festival' : 'classroom';
+  const festival = levelSummary(student, 'festival');
+  const phonics = levelSummary(student, 'phonics');
+  const manualLevel = LEVELS.some(level => level.id === student.manualLevel) ? student.manualLevel : '';
+  const manualFestival = manualLevel === 'festival';
+  const manualPhonics = manualLevel === 'phonics';
+  const festivalUnlocked = manualFestival
+    || manualPhonics
+    || (classroom.total > 0 && classroom.answered >= classroom.total && classroom.accuracy >= 0.9);
+  const phonicsUnlocked = manualPhonics
+    || (festivalUnlocked && festival.total > 0 && festival.answered >= festival.total && festival.accuracy >= 0.9);
+  const currentLevel = phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
   return {
     currentLevel,
-    currentLevelName: manualFestival ? '第二關 節慶英語（老師開啟）' : currentLevel === 'festival' ? '第二關 節慶英語' : '第一關 課室英語',
-    unlockedLevels: festivalUnlocked ? ['classroom', 'festival'] : ['classroom'],
+    currentLevelName: manualLevel
+      ? `${levelName(currentLevel)}（老師開啟）`
+      : levelName(currentLevel),
+    unlockedLevels: phonicsUnlocked
+      ? ['classroom', 'festival', 'phonics']
+      : festivalUnlocked
+      ? ['classroom', 'festival']
+      : ['classroom'],
     classroom,
-    festival: levelSummary(student, 'festival'),
-    manualLevel: student.manualLevel || '',
+    festival,
+    phonics,
+    manualLevel,
   };
 }
 
 function attackPower(student) {
   const levelInfo = studentLevelInfo(student);
+  const levelBonus = levelInfo.currentLevel === 'phonics' ? 2 : levelInfo.currentLevel === 'festival' ? 1 : 0;
   return 1
-    + (levelInfo.currentLevel === 'festival' ? 1 : 0)
+    + levelBonus
     + (normalizeRole(student.role) === 'warrior' ? 1 : 0)
     + (classOwns(student.classNum, '操場') ? 1 : 0)
     + (student.powerUps?.boost || 0);
@@ -503,6 +629,9 @@ function applyCorrectAnswer(student, territoryName) {
   if (levelInfo.currentLevel === 'festival') {
     attack += 1;
     coins += 1;
+  } else if (levelInfo.currentLevel === 'phonics') {
+    attack += 2;
+    coins += 2;
   }
 
   if (!card && classOwns(student.classNum, '活動中心') && Math.random() < 0.18) {
@@ -960,6 +1089,10 @@ app.post('/api/teacher/questions', (req, res) => {
     en: req.body.en,
     zh: req.body.zh,
     level: req.body.level,
+    mode: req.body.mode,
+    prompt: req.body.prompt,
+    speak: req.body.speak,
+    options: req.body.options,
   });
   if (!question.en || !question.zh) return res.status(400).json({ error: '英文和中文都要填。' });
   gameData.customQuestions.push(question);
@@ -976,10 +1109,15 @@ app.put('/api/teacher/questions/:id', (req, res) => {
   if (!base && !custom) return res.status(404).json({ error: '找不到題目。' });
 
   const question = normalizeQuestion({
+    ...(base || custom || {}),
     id,
     en: req.body.en,
     zh: req.body.zh,
     level: req.body.level,
+    mode: req.body.mode || (base || custom || {}).mode,
+    prompt: req.body.prompt || (base || custom || {}).prompt,
+    speak: req.body.speak || (base || custom || {}).speak,
+    options: req.body.options || (base || custom || {}).options,
   });
   if (!question.en || !question.zh) return res.status(400).json({ error: '英文和中文都要填。' });
 
@@ -1018,10 +1156,10 @@ app.post('/api/teacher/students/:id/level', (req, res) => {
   const student = gameData.students[req.params.id];
   if (!student) return res.status(404).json({ error: '找不到學生。' });
   const level = String(req.body.level || '');
-  student.manualLevel = level === 'festival' ? 'festival' : '';
+  student.manualLevel = ['festival', 'phonics'].includes(level) ? level : '';
   pushEvent(
     student.manualLevel
-      ? `老師開啟 ${student.name} 的第二關。`
+      ? `老師開啟 ${student.name} 的${student.manualLevel === 'phonics' ? '第三關' : '第二關'}。`
       : `老師將 ${student.name} 改回自動關卡。`,
     'teacher'
   );

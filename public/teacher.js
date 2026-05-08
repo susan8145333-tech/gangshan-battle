@@ -206,8 +206,11 @@ function renderStudents() {
         <td>${student.bestStreak || 0}</td>
         <td>${student.recordingCount || 0}</td>
         <td>
-          <button class="mini-button" type="button" data-student-level="${escapeHtml(student.id)}" data-next-level="${student.manualLevel === 'festival' ? '' : 'festival'}">
-            ${student.manualLevel === 'festival' ? '回自動' : '開第二關'}
+          <button class="mini-button" type="button" data-student-level="${escapeHtml(student.id)}" data-next-level="${student.manualLevel ? '' : 'festival'}">
+            ${student.manualLevel ? '回自動' : '開第二關'}
+          </button>
+          <button class="mini-button" type="button" data-student-level="${escapeHtml(student.id)}" data-next-level="phonics">
+            開第三關
           </button>
         </td>
       </tr>`;
@@ -226,21 +229,38 @@ function roleName(role) {
 function getLevelInfo(student) {
   const questions = data?.questions || [];
   const stats = student.questionStats || {};
-  const ids = questions.filter(q => q.level === 'classroom').map(q => q.id);
-  const answered = ids.filter(id => (stats[id]?.attempts || 0) > 0).length;
-  const attempts = ids.reduce((sum, id) => sum + (stats[id]?.attempts || 0), 0);
-  const correct = ids.reduce((sum, id) => sum + (stats[id]?.correct || 0), 0);
-  const accuracy = attempts ? correct / attempts : 0;
-  const festivalUnlocked = student.manualLevel === 'festival' || (ids.length > 0 && answered >= ids.length && accuracy >= 0.9);
+  const summary = level => {
+    const ids = questions.filter(q => q.level === level).map(q => q.id);
+    const answered = ids.filter(id => (stats[id]?.attempts || 0) > 0).length;
+    const attempts = ids.reduce((sum, id) => sum + (stats[id]?.attempts || 0), 0);
+    const correct = ids.reduce((sum, id) => sum + (stats[id]?.correct || 0), 0);
+    const accuracy = attempts ? correct / attempts : 0;
+    return { total: ids.length, answered, attempts, correct, accuracy };
+  };
+  const levelTitle = level => ({
+    classroom: '第一關 課室英語',
+    festival: '第二關 節慶英語',
+    phonics: '第三關 Phonics 聽力',
+  }[level] || '自訂關卡');
+  const classroom = summary('classroom');
+  const festival = summary('festival');
+  const manualLevel = ['festival', 'phonics'].includes(student.manualLevel) ? student.manualLevel : '';
+  const festivalUnlocked = manualLevel === 'festival'
+    || manualLevel === 'phonics'
+    || (classroom.total > 0 && classroom.answered >= classroom.total && classroom.accuracy >= 0.9);
+  const phonicsUnlocked = manualLevel === 'phonics'
+    || (festivalUnlocked && festival.total > 0 && festival.answered >= festival.total && festival.accuracy >= 0.9);
+  const currentLevel = phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
   return {
-    currentLevel: festivalUnlocked ? 'festival' : 'classroom',
-    currentLevelName: student.manualLevel === 'festival' ? '第二關 節慶英語（老師開啟）' : festivalUnlocked ? '第二關 節慶英語' : '第一關 課室英語',
+    currentLevel,
+    currentLevelName: manualLevel ? `${levelTitle(currentLevel)}（老師開啟）` : levelTitle(currentLevel),
   };
 }
 
 function attackPower(student) {
   const level = getLevelInfo(student);
-  return 1 + (level.currentLevel === 'festival' ? 1 : 0) + (student.powerUps?.boost || 0);
+  const levelBonus = level.currentLevel === 'phonics' ? 2 : level.currentLevel === 'festival' ? 1 : 0;
+  return 1 + levelBonus + (student.powerUps?.boost || 0);
 }
 
 function renderQuestions() {
