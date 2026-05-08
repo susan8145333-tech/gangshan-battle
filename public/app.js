@@ -544,14 +544,14 @@ function renderHtmlMapOverlay() {
         : `攻破 ${territory.maxHp - territory.hp}/${territory.maxHp}`
       : `502 ${territory.progress['502']}/${territory.maxHp}｜503 ${territory.progress['503']}/${territory.maxHp}`;
     const showOwner = Boolean(ownerMeta);
-    const showProgress = selected || isMega || isRoad;
+    const showProgress = selected && !showOwner;
     return `
       <button
         class="map-zone-card ${isRoom ? 'room-card' : ''} ${isRoad ? 'road-card' : ''} ${isMega ? 'mega-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''} ${isMine ? 'mine' : ''} ${selected ? 'selected' : ''}"
         style="left:${left}%;top:${top}%;width:${width}%;height:${height}%;"
         type="button"
         data-map-zone="${escapeHtml(name)}"
-        title="${escapeHtml(name)}"
+        aria-label="${escapeHtml(`${name} ${ownerMeta || progressMeta}`)}"
       >
         <span>${escapeHtml(name)}</span>
         ${showOwner ? `<small>${escapeHtml(ownerMeta)}</small>` : ''}
