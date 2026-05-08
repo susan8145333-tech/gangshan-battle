@@ -104,12 +104,14 @@ const QUESTIONS = [
   { id: 'f34', en: 'vampire', zh: '吸血鬼' },
   { id: 'f35', en: 'candy', zh: '糖果' },
 ].map(q => ({ ...q, level: 'festival', levelName: '第二關 節慶英語' })))
-  .concat(buildPhonicsQuestions());
+  .concat(buildPhonicsQuestions())
+  .concat(buildFinalReviewQuestions());
 
 const LEVELS = [
   { id: 'classroom', name: '第一關 課室英語', order: 1 },
   { id: 'festival', name: '第二關 節慶英語', order: 2 },
   { id: 'phonics', name: '第三關 Phonics 聽力', order: 3 },
+  { id: 'final', name: '第四關 學力檢測總挑戰', order: 4 },
 ];
 
 const ROLES = {
@@ -137,6 +139,7 @@ function normalizeQuestion(raw) {
   if (raw.mode) question.mode = String(raw.mode || '').trim();
   if (raw.prompt) question.prompt = String(raw.prompt || '').trim();
   if (raw.speak) question.speak = String(raw.speak || '').trim();
+  if (raw.recordText) question.recordText = String(raw.recordText || '').trim();
   if (raw.skill) question.skill = String(raw.skill || '').trim();
   if (Array.isArray(raw.options)) {
     question.options = raw.options.map(option => String(option || '').trim()).filter(Boolean);
@@ -289,6 +292,123 @@ function buildPhonicsQuestions() {
     level: 'phonics',
     levelName: phonicsLevelName,
   });
+
+  return questions;
+}
+
+function buildFinalReviewQuestions() {
+  const level = 'final';
+  const levelName = '第四關 學力檢測總挑戰';
+  const questions = [];
+  const add = (id, prompt, answer, options, recordText = '') => {
+    questions.push({
+      id,
+      en: prompt,
+      zh: answer,
+      prompt,
+      recordText: recordText || answer,
+      options,
+      mode: 'quizRecord',
+      level,
+      levelName,
+    });
+  };
+
+  [
+    ['fr-class-01', 'May I come in?', '我可以進來嗎？', ['請坐下。', '我可以進來嗎？', '請舉手。', '請站起來。']],
+    ['fr-class-02', 'May I go to the restroom?', '我可以去洗手間嗎？', ['我可以去洗手間嗎？', '我可以借你的鉛筆嗎？', '不要在走廊跑步。', '合上你的書。']],
+    ['fr-class-03', 'Raise your hand.', '請舉手。', ['請站起來。', '請舉手。', '仔細聽。', '排隊。']],
+    ['fr-class-04', "Don't run in the hallway.", '不要在走廊跑步。', ['保持安靜。', '不要在走廊跑步。', '打開你的書。', '幫我一個忙。']],
+    ['fr-class-05', 'Listen carefully.', '仔細聽。', ['仔細聽。', '排隊。', '舉起雙手。', '不客氣。']],
+    ['fr-class-06', 'Line up.', '排隊。', ['保持安靜。', '排隊。', '合上你的書。', '請坐下。']],
+  ].forEach(([id, en, answer, options]) => add(id, `選出英文意思：${en}`, answer, options, `${en} ${answer}`));
+
+  [
+    ['fr-fest-01', 'We eat rice dumplings and stand eggs on ________.', 'Dragon Boat Festival', ['Chinese New Year', 'Dragon Boat Festival', 'Moon Festival', 'Halloween']],
+    ['fr-fest-02', 'We eat moon cakes and pomelos on ________.', 'Moon Festival', ['Moon Festival', 'Christmas', 'Easter', "Father's Day"]],
+    ['fr-fest-03', 'We go trick-or-treating on ________.', 'Halloween', ['Halloween', 'Teacher\'s Day', 'Double Tenth Day', 'Easter']],
+    ['fr-fest-04', 'We get lucky money on ________.', 'Chinese New Year', ['Dragon Boat Festival', 'Chinese New Year', 'Christmas', "Mother's Day"]],
+    ['fr-fest-05', 'September 28th is ________.', "Teacher's Day", ["Teacher's Day", "Father's Day", 'Christmas', 'Double Tenth Day']],
+    ['fr-fest-06', 'October 10th is ________.', 'Double Tenth Day', ['Moon Festival', 'Double Tenth Day', 'Easter', 'Halloween']],
+  ].forEach(([id, prompt, answer, options]) => add(id, prompt, answer, options, answer));
+
+  [
+    ['fr-qa-01', 'What time is it?', "It's seven thirty.", ["It's seven thirty.", "It's Tuesday.", "It's 35 dollars.", "I'm fine."]],
+    ['fr-qa-02', 'Where is the library?', "It's on Green Street.", ["It's on Green Street.", "I'm going to the library.", "It's 35 dollars.", "She's a doctor."]],
+    ['fr-qa-03', 'How much is it?', "It's 35 dollars.", ["It's Tuesday.", "It's 35 dollars.", 'I have a headache.', 'I go by bus.']],
+    ['fr-qa-04', "What's wrong?", 'I have a headache.', ['I have a headache.', "It's seven thirty.", "I'm twelve.", 'Sure. Come in.']],
+    ['fr-qa-05', 'What do you want for breakfast?', 'I want some milk and bread.', ['I want some milk and bread.', 'I go to school by bus.', "She's a doctor.", "It's on Green Street."]],
+    ['fr-qa-06', 'How do you go to school?', 'I go to school by bus.', ['I go to school by bus.', "It's Tuesday.", 'I want juice.', "I'm fine."]],
+    ['fr-qa-07', 'What does she do?', "She's a doctor.", ["She's a doctor.", "It's 35 dollars.", 'I have a cold.', 'I go by bike.']],
+  ].forEach(([id, prompt, answer, options]) => add(id, `選出正確回答：${prompt}`, answer, options, `${prompt} ${answer}`));
+
+  [
+    ['fr-health-01', '頭痛', 'headache', ['headache', 'stomachache', 'toothache', 'fever']],
+    ['fr-health-02', '胃痛', 'stomachache', ['stomachache', 'headache', 'cold', 'cough']],
+    ['fr-health-03', '牙痛', 'toothache', ['toothache', 'fever', 'runny nose', 'cold']],
+    ['fr-health-04', '發燒', 'fever', ['cold', 'cough', 'fever', 'headache']],
+    ['fr-health-05', '流鼻水', 'runny nose', ['runny nose', 'cough', 'toothache', 'stomachache']],
+    ['fr-job-01', '醫生', 'doctor', ['doctor', 'nurse', 'teacher', 'cook']],
+    ['fr-job-02', '警察', 'police officer', ['firefighter', 'police officer', 'doctor', 'nurse']],
+    ['fr-job-03', '消防員', 'firefighter', ['teacher', 'cook', 'firefighter', 'police officer']],
+  ].forEach(([id, zh, answer, options]) => add(id, `選出英文：${zh}`, answer, options, `${answer} ${zh}`));
+
+  [
+    ['fr-place-01', '圖書館', 'library', ['library', 'laboratory', 'laundry', 'lobby']],
+    ['fr-place-02', '超級市場', 'supermarket', ['superstore', 'supermarket', 'superman', 'station']],
+    ['fr-place-03', '郵局', 'post office', ['police station', 'post office', 'pet shop', 'park']],
+    ['fr-place-04', '博物館', 'museum', ['music hall', 'museum', 'mosque', 'market']],
+    ['fr-place-05', '餐廳', 'restaurant', ['restaurant', 'restroom', 'reception', 'road']],
+    ['fr-place-06', '醫院', 'hospital', ['hotel', 'house', 'hospital', 'hall']],
+    ['fr-place-07', '書店', 'bookstore', ['bookshelf', 'bookstore', 'bookmark', 'bank']],
+    ['fr-place-08', '麵包店', 'bakery', ['bakery', 'bank', 'barn', 'bookstore']],
+  ].forEach(([id, zh, answer, options]) => add(id, `選出英文：${zh}`, answer, options, `${answer} ${zh}`));
+
+  [
+    ['fr-number-01', '215', 'two hundred and fifteen', ['two hundred and fifteen', 'two hundred and fifty', 'two thousand fifteen', 'two hundred five']],
+    ['fr-number-02', '330', 'three hundred and thirty', ['three hundred and thirteen', 'three hundred and thirty', 'thirty-three hundred', 'three thousand thirty']],
+    ['fr-number-03', '1,080', 'one thousand and eighty', ['one thousand and eighty', 'ten thousand and eighty', 'one hundred and eighty', 'one thousand eight hundred']],
+    ['fr-number-04', '18', 'eighteen', ['eighty', 'eighteen', 'eight', 'eighth']],
+    ['fr-number-05', '90', 'ninety', ['nineteen', 'ninety', 'nine hundred', 'nighty']],
+    ['fr-time-01', '7:30', "It's seven thirty.", ["It's seven thirty.", "It's seven thirteen.", "It's six thirty.", "It's seven fifty."]],
+    ['fr-time-02', '9:15', "It's nine fifteen.", ["It's nine fifty.", "It's nine fifteen.", "It's five fifteen.", "It's nine forty-five."]],
+    ['fr-time-03', '6:45', "It's six forty-five.", ["It's six fourteen.", "It's six forty-five.", "It's seven forty-five.", "It's six fifteen."]],
+  ].forEach(([id, prompt, answer, options]) => add(id, `選出英文：${prompt}`, answer, options, answer));
+
+  [
+    ['fr-case-01', "teacher's day", "TEACHER'S DAY", ["TEACHER'S DAY", "Teacher's Day", "tEaChEr'S dAy", "TEACHER's day"]],
+    ['fr-case-02', 'New York', 'NEW YORK', ['NEW YORK', 'New York', 'nEW yORK', 'new York']],
+    ['fr-case-03', 'christmas', 'Christmas', ['ChriStmas', 'CHRISTMAS', 'Christmas', 'cHRISTMAS']],
+    ['fr-case-04', 'double tenth day', 'Double Tenth Day', ['Double Tenth Day', 'double tenth day', 'DOUBLE tenth DAY', 'Double tenth day']],
+    ['fr-case-05', 'mOON fESTIVAL', 'Moon Festival', ['moon Festival', 'Moon festival', 'Moon Festival', 'MOON FESTIVAL']],
+    ['fr-case-06', 'dragon boat festival', 'Dragon Boat Festival', ['Dragon boat Festival', 'Dragon Boat Festival', 'dragon boat festival', 'DRAGON BOAT FESTIVAL']],
+  ].forEach(([id, prompt, answer, options]) => add(id, `大小寫修正：${prompt}`, answer, options, answer));
+
+  [
+    ['fr-vocab-01', 'by bus', '搭公車', ['搭公車', '騎腳踏車', '搭火車', '走路']],
+    ['fr-vocab-02', 'by MRT', '搭捷運', ['搭飛機', '搭捷運', '搭計程車', '搭汽車']],
+    ['fr-vocab-03', 'on foot', '走路', ['搭公車', '走路', '搭火車', '騎腳踏車']],
+    ['fr-vocab-04', 'living room', '客廳', ['臥室', '浴室', '客廳', '廚房']],
+    ['fr-vocab-05', 'dining room', '餐廳', ['客廳', '餐廳', '臥室', '浴室']],
+    ['fr-vocab-06', 'moon cake', '月餅', ['粽子', '柚子', '月餅', '火雞']],
+    ['fr-vocab-07', 'rice dumpling', '粽子', ['粽子', '春捲', '水餃', '月餅']],
+    ['fr-vocab-08', 'spring roll', '春捲', ['水餃', '柚子', '火雞', '春捲']],
+  ].forEach(([id, en, answer, options]) => add(id, `選出中文：${en}`, answer, options, `${en} ${answer}`));
+
+  const moonPassage = 'Reading: Amy is celebrating Moon Festival. Her family has a barbecue tonight. They eat moon cakes and pomelos. Grandma tells stories about the moon.';
+  add('fr-read-moon-01', `${moonPassage}\nWhat festival is today?`, 'Moon Festival', ['Halloween', 'Christmas', 'Moon Festival', 'Dragon Boat Festival'], 'Today is Moon Festival.');
+  add('fr-read-moon-02', `${moonPassage}\nWhat do they eat?`, 'moon cakes and pomelos', ['rice dumplings', 'moon cakes and pomelos', 'turkey', 'cookies'], 'They eat moon cakes and pomelos.');
+  add('fr-read-moon-03', `${moonPassage}\nWhat does Grandma do?`, 'She tells stories.', ['She sings songs.', 'She tells stories.', 'She watches TV.', 'She cooks dinner.'], 'Grandma tells stories.');
+
+  const planPassage = 'Reading: Jason has basketball on Monday, swimming on Tuesday, art on Wednesday, English on Thursday, science on Friday, music on Saturday, and free day on Sunday.';
+  add('fr-read-plan-01', `${planPassage}\nWhat does Jason do on Tuesday?`, 'He has swimming class.', ['He plays basketball.', 'He has swimming class.', 'He has art class.', 'He rests.'], 'He has swimming class on Tuesday.');
+  add('fr-read-plan-02', `${planPassage}\nWhich day does Jason have English class?`, 'Thursday', ['Monday', 'Wednesday', 'Thursday', 'Friday'], 'Jason has English class on Thursday.');
+  add('fr-read-plan-03', `${planPassage}\nWhen is Jason free?`, 'Sunday', ['Saturday', 'Sunday', 'Friday', 'Thursday'], 'Jason is free on Sunday.');
+
+  const dinnerPassage = "Reading: Ken is hungry. Dad says they are having beef noodles tonight. Ken wants some juice. The orange juice is in the fridge.";
+  add('fr-read-dinner-01', `${dinnerPassage}\nWhat do they have for dinner?`, 'beef noodles', ['rice', 'pizza', 'beef noodles', 'hamburgers'], 'They have beef noodles for dinner.');
+  add('fr-read-dinner-02', `${dinnerPassage}\nWhat does Ken want to drink?`, 'juice', ['milk', 'tea', 'water', 'juice'], 'Ken wants some juice.');
+  add('fr-read-dinner-03', `${dinnerPassage}\nWhere is the juice?`, 'in the fridge', ['on the table', 'in the fridge', 'in the bag', 'in the box'], 'The juice is in the fridge.');
 
   return questions;
 }
@@ -551,21 +671,29 @@ function studentLevelInfo(student) {
   const classroom = levelSummary(student, 'classroom');
   const festival = levelSummary(student, 'festival');
   const phonics = levelSummary(student, 'phonics');
+  const final = levelSummary(student, 'final');
   const manualLevel = LEVELS.some(level => level.id === student.manualLevel) ? student.manualLevel : '';
   const manualFestival = manualLevel === 'festival';
   const manualPhonics = manualLevel === 'phonics';
+  const manualFinal = manualLevel === 'final';
   const festivalUnlocked = manualFestival
     || manualPhonics
+    || manualFinal
     || (classroom.total > 0 && classroom.answered >= classroom.total && classroom.accuracy >= 0.9);
   const phonicsUnlocked = manualPhonics
+    || manualFinal
     || (festivalUnlocked && festival.total > 0 && festival.answered >= festival.total && festival.accuracy >= 0.9);
-  const currentLevel = phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
+  const finalUnlocked = manualFinal
+    || (phonicsUnlocked && phonics.total > 0 && phonics.answered >= phonics.total && phonics.accuracy >= 0.9);
+  const currentLevel = finalUnlocked ? 'final' : phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
   return {
     currentLevel,
     currentLevelName: manualLevel
       ? `${levelName(currentLevel)}（老師開啟）`
       : levelName(currentLevel),
-    unlockedLevels: phonicsUnlocked
+    unlockedLevels: finalUnlocked
+      ? ['classroom', 'festival', 'phonics', 'final']
+      : phonicsUnlocked
       ? ['classroom', 'festival', 'phonics']
       : festivalUnlocked
       ? ['classroom', 'festival']
@@ -573,13 +701,14 @@ function studentLevelInfo(student) {
     classroom,
     festival,
     phonics,
+    final,
     manualLevel,
   };
 }
 
 function attackPower(student) {
   const levelInfo = studentLevelInfo(student);
-  const levelBonus = levelInfo.currentLevel === 'phonics' ? 2 : levelInfo.currentLevel === 'festival' ? 1 : 0;
+  const levelBonus = levelInfo.currentLevel === 'final' ? 3 : levelInfo.currentLevel === 'phonics' ? 2 : levelInfo.currentLevel === 'festival' ? 1 : 0;
   return 1
     + levelBonus
     + (normalizeRole(student.role) === 'warrior' ? 1 : 0)
@@ -681,6 +810,9 @@ function applyCorrectAnswer(student, territoryName) {
   } else if (levelInfo.currentLevel === 'phonics') {
     attack += 2;
     coins += 2;
+  } else if (levelInfo.currentLevel === 'final') {
+    attack += 3;
+    coins += 3;
   }
 
   if (!card && classOwns(student.classNum, '活動中心') && Math.random() < 0.18) {
@@ -1141,6 +1273,7 @@ app.post('/api/teacher/questions', (req, res) => {
     mode: req.body.mode,
     prompt: req.body.prompt,
     speak: req.body.speak,
+    recordText: req.body.recordText,
     options: req.body.options,
   });
   if (!question.en || !question.zh) return res.status(400).json({ error: '英文和中文都要填。' });
@@ -1166,6 +1299,7 @@ app.put('/api/teacher/questions/:id', (req, res) => {
     mode: req.body.mode || (base || custom || {}).mode,
     prompt: req.body.prompt || (base || custom || {}).prompt,
     speak: req.body.speak || (base || custom || {}).speak,
+    recordText: req.body.recordText || (base || custom || {}).recordText,
     options: req.body.options || (base || custom || {}).options,
   });
   if (!question.en || !question.zh) return res.status(400).json({ error: '英文和中文都要填。' });
@@ -1205,10 +1339,11 @@ app.post('/api/teacher/students/:id/level', (req, res) => {
   const student = gameData.students[req.params.id];
   if (!student) return res.status(404).json({ error: '找不到學生。' });
   const level = String(req.body.level || '');
-  student.manualLevel = ['festival', 'phonics'].includes(level) ? level : '';
+  student.manualLevel = ['festival', 'phonics', 'final'].includes(level) ? level : '';
+  const openedLevelText = student.manualLevel === 'final' ? '第四關' : student.manualLevel === 'phonics' ? '第三關' : '第二關';
   pushEvent(
     student.manualLevel
-      ? `老師開啟 ${student.name} 的${student.manualLevel === 'phonics' ? '第三關' : '第二關'}。`
+      ? `老師開啟 ${student.name} 的${openedLevelText}。`
       : `老師將 ${student.name} 改回自動關卡。`,
     'teacher'
   );

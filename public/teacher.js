@@ -212,6 +212,9 @@ function renderStudents() {
           <button class="mini-button" type="button" data-student-level="${escapeHtml(student.id)}" data-next-level="phonics">
             開第三關
           </button>
+          <button class="mini-button" type="button" data-student-level="${escapeHtml(student.id)}" data-next-level="final">
+            開第四關
+          </button>
         </td>
       </tr>`;
   }).join('');
@@ -241,16 +244,22 @@ function getLevelInfo(student) {
     classroom: '第一關 課室英語',
     festival: '第二關 節慶英語',
     phonics: '第三關 Phonics 聽力',
+    final: '第四關 學力檢測總挑戰',
   }[level] || '自訂關卡');
   const classroom = summary('classroom');
   const festival = summary('festival');
-  const manualLevel = ['festival', 'phonics'].includes(student.manualLevel) ? student.manualLevel : '';
+  const phonics = summary('phonics');
+  const manualLevel = ['festival', 'phonics', 'final'].includes(student.manualLevel) ? student.manualLevel : '';
   const festivalUnlocked = manualLevel === 'festival'
     || manualLevel === 'phonics'
+    || manualLevel === 'final'
     || (classroom.total > 0 && classroom.answered >= classroom.total && classroom.accuracy >= 0.9);
   const phonicsUnlocked = manualLevel === 'phonics'
+    || manualLevel === 'final'
     || (festivalUnlocked && festival.total > 0 && festival.answered >= festival.total && festival.accuracy >= 0.9);
-  const currentLevel = phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
+  const finalUnlocked = manualLevel === 'final'
+    || (phonicsUnlocked && phonics.total > 0 && phonics.answered >= phonics.total && phonics.accuracy >= 0.9);
+  const currentLevel = finalUnlocked ? 'final' : phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
   return {
     currentLevel,
     currentLevelName: manualLevel ? `${levelTitle(currentLevel)}（老師開啟）` : levelTitle(currentLevel),
@@ -259,7 +268,7 @@ function getLevelInfo(student) {
 
 function attackPower(student) {
   const level = getLevelInfo(student);
-  const levelBonus = level.currentLevel === 'phonics' ? 2 : level.currentLevel === 'festival' ? 1 : 0;
+  const levelBonus = level.currentLevel === 'final' ? 3 : level.currentLevel === 'phonics' ? 2 : level.currentLevel === 'festival' ? 1 : 0;
   return 1 + levelBonus + (student.powerUps?.boost || 0);
 }
 

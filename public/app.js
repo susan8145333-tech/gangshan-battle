@@ -54,7 +54,7 @@ const state = {
   student: null,
   data: null,
   questions: [],
-  trialLevel: ['classroom', 'festival', 'phonics'].includes(pageParams.get('trialLevel')) ? pageParams.get('trialLevel') : '',
+  trialLevel: ['classroom', 'festival', 'phonics', 'final'].includes(pageParams.get('trialLevel')) ? pageParams.get('trialLevel') : '',
   target: '',
   currentQuestion: null,
   questionNumber: 0,
@@ -291,22 +291,29 @@ function getLevelInfo(student) {
     classroom: '第一關 課室英語',
     festival: '第二關 節慶英語',
     phonics: '第三關 Phonics 聽力',
+    final: '第四關 學力檢測總挑戰',
   }[level] || '自訂關卡');
   const classroom = summary('classroom');
   const festival = summary('festival');
-  const manualLevel = ['festival', 'phonics'].includes(student.manualLevel) ? student.manualLevel : '';
+  const phonics = summary('phonics');
+  const manualLevel = ['festival', 'phonics', 'final'].includes(student.manualLevel) ? student.manualLevel : '';
   const festivalUnlocked = manualLevel === 'festival'
     || manualLevel === 'phonics'
+    || manualLevel === 'final'
     || (classroom.total > 0 && classroom.answered >= classroom.total && classroom.accuracy >= 0.9);
   const phonicsUnlocked = manualLevel === 'phonics'
+    || manualLevel === 'final'
     || (festivalUnlocked && festival.total > 0 && festival.answered >= festival.total && festival.accuracy >= 0.9);
-  const currentLevel = phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
+  const finalUnlocked = manualLevel === 'final'
+    || (phonicsUnlocked && phonics.total > 0 && phonics.answered >= phonics.total && phonics.accuracy >= 0.9);
+  const currentLevel = finalUnlocked ? 'final' : phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
   if (manualLevel) {
     return {
       currentLevel,
       currentLevelName: `${levelTitle(currentLevel)}（老師開啟）`,
       classroom,
       festival,
+      phonics,
       manualMode: true,
     };
   }
@@ -316,6 +323,7 @@ function getLevelInfo(student) {
       currentLevelName: `老師試玩 ${levelTitle(state.trialLevel)}`,
       classroom,
       festival,
+      phonics,
       trialMode: true,
     };
   }
@@ -324,6 +332,7 @@ function getLevelInfo(student) {
     currentLevelName: levelTitle(currentLevel),
     classroom,
     festival,
+    phonics,
   };
 }
 
@@ -334,7 +343,7 @@ function myLevelInfo() {
 function currentAttackPower() {
   const info = myLevelInfo();
   const ownsField = state.data?.territories?.['操場']?.ownerClass === state.student?.classNum;
-  const levelBonus = info?.currentLevel === 'phonics' ? 2 : info?.currentLevel === 'festival' ? 1 : 0;
+  const levelBonus = info?.currentLevel === 'final' ? 3 : info?.currentLevel === 'phonics' ? 2 : info?.currentLevel === 'festival' ? 1 : 0;
   return 1
     + levelBonus
     + (state.student?.role === 'warrior' ? 1 : 0)
@@ -347,7 +356,7 @@ function renderLevel() {
   if (!info || !$('#levelBadge')) return;
   const c = info.classroom;
   const pct = Math.round((c.accuracy || 0) * 100);
-  const levelBonus = info.currentLevel === 'phonics' ? 2 : info.currentLevel === 'festival' ? 1 : 0;
+  const levelBonus = info.currentLevel === 'final' ? 3 : info.currentLevel === 'phonics' ? 2 : info.currentLevel === 'festival' ? 1 : 0;
   $('#levelBadge').textContent = info.trialMode
     ? `${info.currentLevelName} · 攻擊 +${levelBonus}`
     : info.manualMode
@@ -678,14 +687,15 @@ function itemCost(item) {
 function startQuestion() {
   const q = pickQuestion();
   const isListening = q.mode === 'listening';
+  const usesPrompt = isListening || q.mode === 'quiz' || q.mode === 'quizRecord';
   resetRecording();
   $('#questionCard').hidden = false;
   $('#recordCard').hidden = true;
   $('#nextButton').hidden = true;
   $('#questionCount').textContent = `第 ${state.questionNumber} 題`;
-  $('#englishText').textContent = isListening ? (q.prompt || '聽音，選出正確答案。') : q.en;
-  $('#recordPrompt').textContent = isListening ? '' : `${q.en} ${q.zh}`;
-  setResult(isListening ? '先聽聲音，再選出正確答案。' : '選出正確中文，答對後再錄音。');
+  $('#englishText').textContent = usesPrompt ? (q.prompt || '選出正確答案。') : q.en;
+  $('#recordPrompt').textContent = isListening ? '' : (q.recordText || `${q.en} ${q.zh}`);
+  setResult(isListening ? '先聽聲音，再選出正確答案。' : '選出正確答案，答對後再錄音。');
 
   let options = Array.isArray(q.options) && q.options.length
     ? q.options
@@ -706,7 +716,7 @@ function startQuestion() {
   $$('.option-button').forEach(button => {
     button.addEventListener('click', () => chooseAnswer(button.dataset.option, button));
   });
-  speakEnglish(q.speak || q.en);
+  if (isListening || !usesPrompt) speakEnglish(q.speak || q.en);
 }
 
 function chooseAnswer(chosen, button) {
@@ -728,14 +738,14 @@ function chooseAnswer(chosen, button) {
 
   playSound('correct');
   button.classList.add('correct');
-  if (q.mode === 'listening') {
+  if (q.mode === 'listening' || q.mode === 'quiz') {
     setResult('答對了，送出攻擊。', 'good');
     submitAnswer(chosen).then(() => {
       $('#nextButton').hidden = false;
     });
     return;
   }
-  setResult('答對了。請錄音唸出英文和中文，再送出攻擊。', 'good');
+  setResult('答對了。請錄音唸出畫面上的句子，再送出攻擊。', 'good');
   $('#recordCard').hidden = false;
 }
 
@@ -812,7 +822,7 @@ async function toggleRecording() {
     $('#recordButton').textContent = '停止錄音';
     $('#playRecordButton').disabled = true;
     $('#submitButton').disabled = true;
-    $('#recordHint').textContent = '錄音中，請清楚唸英文，再唸中文。';
+    $('#recordHint').textContent = '錄音中，請清楚唸畫面上的句子。';
   } catch (error) {
     const blocked = error.name === 'NotAllowedError'
       ? '瀏覽器沒有允許麥克風，請到網址列旁邊開啟麥克風權限。'
@@ -844,7 +854,8 @@ function startSpeechCheck() {
         text += ` ${event.results[i][0].transcript}`;
       }
       state.transcript = text.trim();
-      state.speechScore = scoreSpeech(state.currentQuestion.en, state.transcript);
+      const expectedSpeech = state.currentQuestion.recordText || state.currentQuestion.en;
+      state.speechScore = scoreSpeech(expectedSpeech, state.transcript);
     };
     recognition.onerror = () => {};
     recognition.start();
@@ -878,7 +889,7 @@ function updateSpeechGate() {
   }
 
   const percent = Math.round(state.speechScore * 100);
-  const threshold = speechThreshold(state.currentQuestion?.en || '');
+  const threshold = speechThreshold(state.currentQuestion?.recordText || state.currentQuestion?.en || '');
   if (state.speechScore >= threshold) {
     $('#submitButton').disabled = false;
     $('#recordHint').textContent = `英文辨識通過 ${percent}%。可以送出攻擊。`;
@@ -1174,7 +1185,7 @@ $('#nameInput').addEventListener('keydown', event => {
   if (event.key === 'Enter') login();
 });
 $('#speakButton').addEventListener('click', () => {
-  if (state.currentQuestion) speakEnglish(state.currentQuestion.speak || state.currentQuestion.en);
+  if (state.currentQuestion) speakEnglish(state.currentQuestion.speak || state.currentQuestion.recordText || state.currentQuestion.en);
 });
 $('#recordButton').addEventListener('click', toggleRecording);
 $('#playRecordButton').addEventListener('click', playRecording);
