@@ -1553,8 +1553,8 @@ h1 {
 }
 
 .display-side {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) 128px 92px;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   min-height: 0;
 }
@@ -1593,8 +1593,10 @@ h1 {
 }
 
 .display-ranking-card {
+  flex: 0 1 auto;
   display: grid;
   grid-template-rows: auto 1fr;
+  max-height: min(444px, 46dvh);
 }
 
 .display-ranking-list {
@@ -1693,6 +1695,16 @@ h1 {
   overflow: hidden;
 }
 
+.display-events-card {
+  flex: 0 0 128px;
+}
+
+.display-powers-card {
+  flex: 1 1 132px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
 .display-event {
   padding: 7px 9px;
   border-radius: 8px;
@@ -1704,9 +1716,11 @@ h1 {
 }
 
 .display-side .power-list {
-  max-height: 48px;
+  min-height: 0;
+  max-height: none;
   overflow: hidden;
   gap: 4px;
+  align-content: start;
 }
 
 .display-side .power-row {
@@ -1748,6 +1762,7 @@ h1 {
   }
 
   .display-side {
+    display: grid;
     grid-template-rows: auto auto auto;
   }
 
