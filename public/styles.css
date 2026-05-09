@@ -400,9 +400,9 @@ h1 {
   grid-template-rows: 1fr auto;
   gap: 4px;
   padding: 8px 7px 20px;
-  border: 2px solid rgba(71, 85, 105, 0.78);
+  border: 2px solid rgba(71, 85, 105, 0.62);
   border-radius: 6px;
-  background: rgba(71, 85, 105, 0.34);
+  background: rgba(71, 85, 105, 0.24);
   color: #fff;
   font: inherit;
   font-size: clamp(10px, 0.95vw, 14px);
@@ -438,12 +438,12 @@ h1 {
 }
 
 .map-zone-card.owner-502 {
-  background: rgba(37, 99, 235, 0.54);
+  background: rgba(37, 99, 235, 0.4);
   border-color: rgba(37, 99, 235, 0.95);
 }
 
 .map-zone-card.owner-503 {
-  background: rgba(220, 38, 38, 0.54);
+  background: rgba(220, 38, 38, 0.4);
   border-color: rgba(220, 38, 38, 0.95);
 }
 
@@ -454,7 +454,7 @@ h1 {
 }
 
 .map-zone-card.mega-card {
-  background: rgba(20, 83, 45, 0.38);
+  background: rgba(20, 83, 45, 0.26);
   font-size: clamp(18px, 1.55vw, 26px);
 }
 
