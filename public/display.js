@@ -11,15 +11,15 @@ function buildZones() {
   const add = (name, x, y, w = 54, h = 28) => {
     zones[name] = { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
   };
-  add('A棟', 250, 642, 870, 132);
-  add('B棟', 835, 330, 185, 250);
-  add('C棟', 88, 390, 170, 376);
-  add('後北棟', 230, 160, 370, 118);
-  add('前北棟', 590, 220, 280, 105);
-  add('操場', 392, 395, 340, 116);
-  add('籃球場', 238, 395, 100, 150);
-  add('活動中心', 1065, 285, 92, 230);
-  add('廚房', 900, 180, 126, 104);
+  add('A棟', 205, 625, 890, 142);
+  add('B棟', 850, 338, 188, 270);
+  add('C棟', 78, 392, 188, 368);
+  add('後北棟', 232, 184, 382, 92);
+  add('前北棟', 600, 248, 288, 86);
+  add('操場', 398, 404, 336, 104);
+  add('籃球場', 255, 392, 126, 168);
+  add('活動中心', 1055, 296, 96, 230);
+  add('廚房', 918, 196, 126, 92);
   return zones;
 }
 
@@ -97,6 +97,36 @@ function renderMap() {
       }, `${ownerClass} ${territory.ownerStudentName || ''}`.slice(0, 13)));
     }
   });
+  renderMapOverlay();
+}
+
+function renderMapOverlay() {
+  const overlay = $('#displayMapOverlay');
+  if (!overlay) return;
+  overlay.innerHTML = Object.entries(ZONES).map(([name, zone]) => {
+    const territory = data.territories?.[name];
+    if (!territory) return '';
+    const ownerClass = territory.ownerClass || '';
+    const isMega = MEGA_TERRITORIES.includes(name);
+    const isCompact = zone.w < 130 || zone.h < 120;
+    const share502 = territory.maxHp ? Math.round(((territory.progress?.['502'] || 0) / territory.maxHp) * 100) : 0;
+    const share503 = territory.maxHp ? Math.round(((territory.progress?.['503'] || 0) / territory.maxHp) * 100) : 0;
+    const ownerMeta = ownerClass ? `${ownerClass} ${territory.ownerStudentName || '領先'}`.trim() : '';
+    return `
+      <div
+        class="map-zone-card display-zone-card ${isMega ? 'mega-card' : ''} ${isCompact ? 'compact-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''}"
+        style="left:${(zone.x / 1243) * 100}%;top:${(zone.y / 888) * 100}%;width:${(zone.w / 1243) * 100}%;height:${(zone.h / 888) * 100}%;"
+      >
+        <span>${escapeHtml(name)}</span>
+        <div class="zone-scoreline"><b>502 ${share502}%</b><b>503 ${share503}%</b></div>
+        ${ownerMeta ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : '<small class="zone-owner-name">尚未領先</small>'}
+        <div class="zone-battle-bar" aria-hidden="true">
+          <i class="bar-502" style="width:${share502}%"></i>
+          <i class="bar-503" style="width:${share503}%"></i>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderPowers() {

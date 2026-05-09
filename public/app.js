@@ -118,6 +118,39 @@ function pulseMap(kind) {
   setTimeout(() => shell.classList.remove('map-hit', 'map-capture'), 520);
 }
 
+function showCombatBurst(payload) {
+  const burst = $('#combatBurst');
+  if (!burst) return;
+  const result = payload?.result || {};
+  const correct = Boolean(payload?.correct);
+  const territory = result.territoryName || state.target || '目標土地';
+  const className = payload?.student?.classNum || state.student?.classNum || '';
+  const studentName = payload?.student?.name || state.student?.name || '';
+  const title = correct
+    ? result.captured ? `${territory} 樓主更新` : `${territory} 受到攻擊`
+    : `${territory} 遭到反擊`;
+  const lines = correct
+    ? [
+      `${className} ${studentName}`.trim(),
+      `攻擊 +${result.attack || 1} · 金幣 +${result.coins || 0}`,
+      result.neededText || '',
+    ].filter(Boolean)
+    : [
+      `${className} ${studentName}`.trim(),
+      '己方退 1 格，對方推進 1 格',
+    ].filter(Boolean);
+  burst.className = `combat-burst ${correct ? 'good' : 'bad'} ${result.captured ? 'capture' : ''}`;
+  burst.innerHTML = `
+    <strong>${escapeHtml(title)}</strong>
+    ${lines.map(line => `<span>${escapeHtml(line)}</span>`).join('')}
+  `;
+  burst.hidden = false;
+  clearTimeout(showCombatBurst.timer);
+  showCombatBurst.timer = setTimeout(() => {
+    burst.hidden = true;
+  }, result.captured ? 2200 : 1500);
+}
+
 function shuffle(items) {
   const arr = [...items];
   for (let i = arr.length - 1; i > 0; i -= 1) {
@@ -601,7 +634,7 @@ function renderHtmlMapOverlay() {
     const ownerMeta = ownerClass ? `${ownerClass} ${territory.ownerStudentName || '領先'}`.trim() : '';
     const share502 = territory.maxHp ? Math.round(((territory.progress?.['502'] || 0) / territory.maxHp) * 100) : 0;
     const share503 = territory.maxHp ? Math.round(((territory.progress?.['503'] || 0) / territory.maxHp) * 100) : 0;
-    const progressMeta = `${territory.progress?.['502'] || 0}/${territory.maxHp} | ${territory.progress?.['503'] || 0}/${territory.maxHp}`;
+    const progressMeta = `502 ${share502}% | 503 ${share503}%`;
     const leadClass = share502 === share503 ? '' : share502 > share503 ? '502' : '503';
     const isCompact = zone.w < 130 || zone.h < 120;
     const showOwner = Boolean(ownerMeta);
@@ -615,6 +648,7 @@ function renderHtmlMapOverlay() {
         aria-label="${escapeHtml(`${name} ${ownerMeta || progressMeta}`)}"
       >
         <span>${escapeHtml(name)}</span>
+        <div class="zone-scoreline"><b>502 ${share502}%</b><b>503 ${share503}%</b></div>
         ${showOwner ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : leadClass ? `<small class="zone-owner-name">${leadClass} 推進中</small>` : ''}
         ${showProgress ? `<small class="zone-status">${escapeHtml(progressMeta)}</small>` : ''}
         <div class="zone-battle-bar" aria-hidden="true">
@@ -944,6 +978,7 @@ async function submitAnswer(chosenZh, hasRecording = false) {
     playSound('wrong');
     pulseMap('attack');
   }
+  showCombatBurst(payload);
   showReward(payload);
   return payload;
 }
@@ -1303,10 +1338,10 @@ function showReward(payload) {
       : `連勝 ${streak}`;
     kicker.textContent = '攻擊獎勵';
     title.textContent = result.captured
-      ? `${result.territoryName} 守擂成功`
-      : result.card ? `抽到「${result.card}」` : '攻擊成功';
+      ? `${result.territoryName} 樓主更新`
+      : result.card ? `抽到「${result.card}」` : `${result.territoryName || state.target || '土地'} 攻擊成功`;
     body.innerHTML = [
-      result.captured ? `<div class="reward-line dojo-line">${escapeHtml(payload.student.classNum)} ${escapeHtml(payload.student.name)} 的據點</div>` : '',
+      result.captured ? `<div class="reward-line dojo-line">${escapeHtml(payload.student.classNum)} ${escapeHtml(payload.student.name)} 成為目前樓主</div>` : '',
       `<div class="reward-line">土地攻擊 +${result.attack || 1}</div>`,
       `<div class="reward-line">金幣 +${result.coins || 0}</div>`,
       `<div class="reward-line streak-line">${escapeHtml(streakLine)}</div>`,

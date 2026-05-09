@@ -75,6 +75,7 @@
           <img src="map.jpg" alt="岡山國小校園地圖" class="school-map" style="position:absolute;inset:0;z-index:0;">
           <svg id="mapSvg" viewBox="0 0 1243 888" preserveAspectRatio="xMidYMid meet" width="100%" height="100%" style="position:absolute;inset:0;z-index:2;width:100%;height:100%;"></svg>
           <div id="mapHtmlOverlay" class="map-html-overlay" aria-label="可攻佔校園地圖"></div>
+          <div id="combatBurst" class="combat-burst" hidden></div>
           <div id="mapPrompt" class="map-prompt">點選一塊土地開始攻打</div>
         </div>
       </div>
@@ -117,34 +118,42 @@
             <div class="card-shop-grid">
               <div class="card-shop-tile">
                 <button class="card-button" data-card="boost" type="button">重擊 <b id="cardBoost">0</b><span class="help-dot" data-help="boost">?</span></button>
+                <small class="card-effect">下一題攻擊 +2</small>
                 <button class="shop-button" data-item="boost" type="button">買 <small>8 金幣</small></button>
               </div>
               <div class="card-shop-tile">
                 <button class="card-button" data-card="repair" type="button">修復 <b id="cardRepair">0</b><span class="help-dot" data-help="repair">?</span></button>
+                <small class="card-effect">補己方據點血條</small>
                 <button class="shop-button" data-item="repair" type="button">買 <small>5 金幣</small></button>
               </div>
               <div class="card-shop-tile">
                 <button class="card-button" data-card="shield" type="button">防護 <b id="cardShield">0</b><span class="help-dot" data-help="shield">?</span></button>
+                <small class="card-effect">保護己方土地</small>
                 <button class="shop-button" data-item="shield" type="button">買 <small>6 金幣</small></button>
               </div>
               <div class="card-shop-tile">
                 <button class="card-button" data-card="steal" type="button">偷錢 <b id="cardSteal">0</b><span class="help-dot" data-help="steal">?</span></button>
+                <small class="card-effect">選同學偷金幣</small>
                 <button class="shop-button" data-item="steal" type="button">買 <small>7 金幣</small></button>
               </div>
               <div class="card-shop-tile">
                 <button class="card-button" data-card="freeze" type="button">干擾 <b id="cardFreeze">0</b><span class="help-dot" data-help="freeze">?</span></button>
+                <small class="card-effect">讓對手下題變弱</small>
                 <button class="shop-button" data-item="freeze" type="button">買 <small>6 金幣</small></button>
               </div>
               <div class="card-shop-tile">
                 <button class="card-button" data-card="rent" type="button">收租 <b id="cardRent">0</b><span class="help-dot" data-help="rent">?</span></button>
+                <small class="card-effect">土地越多賺越多</small>
                 <button class="shop-button" data-item="rent" type="button">買 <small>9 金幣</small></button>
               </div>
               <div class="card-shop-tile">
                 <button class="card-button" data-card="flag" type="button">奪旗 <b id="cardFlag">0</b><span class="help-dot" data-help="flag">?</span></button>
+                <small class="card-effect">搶對手一塊地</small>
                 <button class="shop-button" data-item="flag" type="button">買 <small>12 金幣</small></button>
               </div>
               <div class="card-shop-tile pack-tile">
                 <span>補給包</span>
+                <small class="card-effect">隨機抽一張卡</small>
                 <button class="shop-button" data-item="pack" type="button">抽 <small>6 金幣</small></button>
               </div>
             </div>
