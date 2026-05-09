@@ -166,18 +166,11 @@ function renderDifferentiationPanel() {
   $('#selectedStudentCount').textContent = `已選 ${selectedStudents.length} 人`;
   $('#selectedStudentChips').innerHTML = selectedStudents.length
     ? selectedStudents.map(student => `
-      <button class="student-chip ${selectedStudents.length === 1 ? 'active' : ''}" type="button" data-focus-student="${escapeHtml(student.id)}">
+      <span class="student-chip ${selectedStudents.length === 1 ? 'active' : ''}">
         ${student.classNum} ${escapeHtml(student.name)}
-      </button>
+      </span>
     `).join('')
-    : '<span class="empty-cards">可在學生總覽勾選，或用上方按鈕快速選班級。點學生名字可查看他的指定題。</span>';
-
-  document.querySelectorAll('[data-focus-student]').forEach(button => {
-    button.addEventListener('click', () => {
-      focusStudent(button.dataset.focusStudent);
-      render();
-    });
-  });
+    : '<span class="empty-cards">可在學生總覽勾選，或用上方按鈕快速選班級。</span>';
 
   renderAssignQuestionList();
 }
@@ -221,12 +214,6 @@ function loadStudentAssignment(studentId) {
   const levelSelect = $('#batchLevelSelect');
   if (levelSelect) levelSelect.value = student.manualLevel || '';
   assignStatusMessage = `${student.classNum} ${student.name} 目前指定 ${selectedQuestionIds.size} 題。`;
-}
-
-function focusStudent(studentId) {
-  if (!data?.students?.[studentId]) return;
-  selectedStudentIds = new Set([studentId]);
-  loadStudentAssignment(studentId);
 }
 
 function renderMap() {
@@ -342,7 +329,7 @@ function renderStudents() {
           <input type="checkbox" data-student-select="${escapeHtml(student.id)}" ${selectedStudentIds.has(student.id) ? 'checked' : ''} aria-label="選取 ${escapeHtml(student.name)}">
         </td>
         <td>${student.classNum}</td>
-        <td><button class="student-name-button" type="button" data-focus-student="${escapeHtml(student.id)}">${escapeHtml(student.name)}</button></td>
+        <td>${escapeHtml(student.name)}</td>
         <td>${escapeHtml(roleName(student.role))}</td>
         <td>${student.score || 0}</td>
         <td>${student.coins || 0}</td>
@@ -379,12 +366,6 @@ function renderStudents() {
       if (selectedStudentIds.size !== 1) assignStatusMessage = `已選 ${selectedStudentIds.size} 人，可批次套用關卡或題目。`;
       renderStudents();
       renderDifferentiationPanel();
-    });
-  });
-  $('#studentRows').querySelectorAll('[data-focus-student]').forEach(button => {
-    button.addEventListener('click', () => {
-      focusStudent(button.dataset.focusStudent);
-      render();
     });
   });
 }
