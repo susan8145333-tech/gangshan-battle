@@ -794,6 +794,22 @@ function territoryShare(terr, classNum) {
   return Math.round(((terr.progress?.[classNum] || 0) / terr.maxHp) * 100);
 }
 
+function targetNeedText(terr, classNum) {
+  const myProgress = terr.progress?.[classNum] || 0;
+  const otherProgress = terr.progress?.[otherClass(classNum)] || 0;
+  if (terr.ownerClass === classNum) {
+    const lead = Math.max(0, myProgress - otherProgress);
+    const danger = Math.max(0, TAKEOVER_MARGIN - lead);
+    return danger > 0 ? `守住這棟：再領先 ${danger} 格更穩。` : `目前守住，領先 ${lead} 格。`;
+  }
+  const needToOpen = Math.max(0, CLAIM_THRESHOLD - myProgress);
+  const needToOvertake = terr.ownerClass
+    ? Math.max(0, otherProgress + TAKEOVER_MARGIN - myProgress)
+    : needToOpen;
+  const needed = Math.max(needToOpen, needToOvertake);
+  return needed > 0 ? `距離取得領先還差 ${needed} 格。` : '下一題答對就可能翻盤。';
+}
+
 function pushEvent(text, type = 'info') {
   gameData.events.unshift({ text, type, ts: now() });
   gameData.events = gameData.events.slice(0, 80);
@@ -987,7 +1003,10 @@ function applyCorrectAnswer(student, territoryName) {
     card = card || '干擾效果';
   }
 
-  if (!card && student.streak > 0 && student.streak % 5 === 0) {
+  if (nextStreak > 0 && nextStreak % 8 === 0) {
+    attack += 2;
+    card = '8 連勝強攻';
+  } else if (!card && nextStreak > 0 && nextStreak % 5 === 0) {
     attack += 1;
     card = '連勝重擊';
   } else if (!card && roll < 0.10) {
@@ -1095,6 +1114,7 @@ function applyCorrectAnswer(student, territoryName) {
     territoryName: terr.name,
     ownerClass: terr.ownerClass,
     ownerStudentName: terr.ownerStudentName,
+    neededText: targetNeedText(terr, student.classNum),
     type: 'correct',
   };
 }
@@ -1328,7 +1348,7 @@ function applyWrongAnswer(student, territoryName) {
   const terr = gameData.territories[territoryName];
   student.wrong += 1;
   student.streak = 0;
-  student.score = Math.max(0, (student.score || 0) - 3);
+  student.score = Math.max(0, (student.score || 0) - 1);
 
   if (terr) {
     terr.progress[student.classNum] = Math.max(0, (terr.progress[student.classNum] || 0) - 1);

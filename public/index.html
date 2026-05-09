@@ -43,6 +43,7 @@
         <p class="eyebrow">岡山大作戰</p>
         <h2 id="playerTitle">502 Susan</h2>
         <div id="roleBadge" class="role-badge">戰士 · 攻擊 +1</div>
+        <div id="missionBadge" class="mission-badge">任務：答對 20 題</div>
       </div>
       <div class="score-strip">
         <div><span id="myScore">0</span><small>分數</small></div>
@@ -84,6 +85,16 @@
           <span>目標土地</span>
           <strong id="targetName">尚未選擇</strong>
           <div id="targetOwner" class="target-owner">目前尚未被佔領</div>
+          <div class="target-progress" aria-label="攻佔進度">
+            <div class="target-progress-meta">
+              <span id="targetNeed">先點地圖選擇目標</span>
+              <b id="targetLead">尚未開戰</b>
+            </div>
+            <div class="target-battle-bar">
+              <i id="targetBar502" class="bar-502"></i>
+              <i id="targetBar503" class="bar-503"></i>
+            </div>
+          </div>
           <small id="targetPower">先點地圖上的大區域</small>
         </div>
 
@@ -100,46 +111,50 @@
             <span>卡牌與商店</span>
             <strong id="boostBadge">重擊 +0</strong>
           </div>
-          <div class="card-shop-grid">
-            <div class="card-shop-tile">
-              <button class="card-button" data-card="boost" type="button">重擊 <b id="cardBoost">0</b><span class="help-dot" data-help="boost">?</span></button>
-              <button class="shop-button" data-item="boost" type="button">買 <small>8 金幣</small></button>
+          <div id="ownedCardsSummary" class="owned-cards-summary"></div>
+          <details id="shopDetails" class="shop-details">
+            <summary>打開商店買卡</summary>
+            <div class="card-shop-grid">
+              <div class="card-shop-tile">
+                <button class="card-button" data-card="boost" type="button">重擊 <b id="cardBoost">0</b><span class="help-dot" data-help="boost">?</span></button>
+                <button class="shop-button" data-item="boost" type="button">買 <small>8 金幣</small></button>
+              </div>
+              <div class="card-shop-tile">
+                <button class="card-button" data-card="repair" type="button">修復 <b id="cardRepair">0</b><span class="help-dot" data-help="repair">?</span></button>
+                <button class="shop-button" data-item="repair" type="button">買 <small>5 金幣</small></button>
+              </div>
+              <div class="card-shop-tile">
+                <button class="card-button" data-card="shield" type="button">防護 <b id="cardShield">0</b><span class="help-dot" data-help="shield">?</span></button>
+                <button class="shop-button" data-item="shield" type="button">買 <small>6 金幣</small></button>
+              </div>
+              <div class="card-shop-tile">
+                <button class="card-button" data-card="steal" type="button">偷錢 <b id="cardSteal">0</b><span class="help-dot" data-help="steal">?</span></button>
+                <button class="shop-button" data-item="steal" type="button">買 <small>7 金幣</small></button>
+              </div>
+              <div class="card-shop-tile">
+                <button class="card-button" data-card="freeze" type="button">干擾 <b id="cardFreeze">0</b><span class="help-dot" data-help="freeze">?</span></button>
+                <button class="shop-button" data-item="freeze" type="button">買 <small>6 金幣</small></button>
+              </div>
+              <div class="card-shop-tile">
+                <button class="card-button" data-card="rent" type="button">收租 <b id="cardRent">0</b><span class="help-dot" data-help="rent">?</span></button>
+                <button class="shop-button" data-item="rent" type="button">買 <small>9 金幣</small></button>
+              </div>
+              <div class="card-shop-tile">
+                <button class="card-button" data-card="flag" type="button">奪旗 <b id="cardFlag">0</b><span class="help-dot" data-help="flag">?</span></button>
+                <button class="shop-button" data-item="flag" type="button">買 <small>12 金幣</small></button>
+              </div>
+              <div class="card-shop-tile pack-tile">
+                <span>補給包</span>
+                <button class="shop-button" data-item="pack" type="button">抽 <small>6 金幣</small></button>
+              </div>
             </div>
-            <div class="card-shop-tile">
-              <button class="card-button" data-card="repair" type="button">修復 <b id="cardRepair">0</b><span class="help-dot" data-help="repair">?</span></button>
-              <button class="shop-button" data-item="repair" type="button">買 <small>5 金幣</small></button>
-            </div>
-            <div class="card-shop-tile">
-              <button class="card-button" data-card="shield" type="button">防護 <b id="cardShield">0</b><span class="help-dot" data-help="shield">?</span></button>
-              <button class="shop-button" data-item="shield" type="button">買 <small>6 金幣</small></button>
-            </div>
-            <div class="card-shop-tile">
-              <button class="card-button" data-card="steal" type="button">偷錢 <b id="cardSteal">0</b><span class="help-dot" data-help="steal">?</span></button>
-              <button class="shop-button" data-item="steal" type="button">買 <small>7 金幣</small></button>
-            </div>
-            <div class="card-shop-tile">
-              <button class="card-button" data-card="freeze" type="button">干擾 <b id="cardFreeze">0</b><span class="help-dot" data-help="freeze">?</span></button>
-              <button class="shop-button" data-item="freeze" type="button">買 <small>6 金幣</small></button>
-            </div>
-            <div class="card-shop-tile">
-              <button class="card-button" data-card="rent" type="button">收租 <b id="cardRent">0</b><span class="help-dot" data-help="rent">?</span></button>
-              <button class="shop-button" data-item="rent" type="button">買 <small>9 金幣</small></button>
-            </div>
-            <div class="card-shop-tile">
-              <button class="card-button" data-card="flag" type="button">奪旗 <b id="cardFlag">0</b><span class="help-dot" data-help="flag">?</span></button>
-              <button class="shop-button" data-item="flag" type="button">買 <small>12 金幣</small></button>
-            </div>
-            <div class="card-shop-tile pack-tile">
-              <span>補給包</span>
-              <button class="shop-button" data-item="pack" type="button">抽 <small>6 金幣</small></button>
-            </div>
-          </div>
+          </details>
           <label class="field-label" for="opponentSelect">選擇同學</label>
           <div class="raid-row">
             <select id="opponentSelect" class="opponent-select"></select>
             <button id="raidButton" class="danger-button" type="button">突襲 10</button>
           </div>
-          <small id="shopHint">連勝 3 題加金幣，5 題會重擊，10 連勝有補給。</small>
+          <small id="shopHint">連勝 3 題加金幣，5 題重擊，8 題強攻，10 連勝有補給。</small>
         </section>
 
         <section id="questionCard" class="question-card" hidden>

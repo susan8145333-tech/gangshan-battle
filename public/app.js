@@ -1,6 +1,9 @@
 const ZONES = buildZones();
 const ROAD_TERRITORIES = [];
 const MEGA_TERRITORIES = ['A棟', 'B棟', 'C棟', '後北棟', '前北棟', '操場', '籃球場', '活動中心', '廚房'];
+const CLAIM_THRESHOLD = 8;
+const TAKEOVER_MARGIN = 4;
+const CARD_ORDER = ['boost', 'repair', 'shield', 'steal', 'freeze', 'rent', 'flag'];
 
 function buildZones() {
   const zones = {};
@@ -263,6 +266,25 @@ function renderPlayer() {
   $('#myCoins').textContent = state.student.coins || 0;
   $('#myStreak').textContent = state.student.streak || 0;
   $('#myAttack').textContent = currentAttackPower();
+  const answered = (state.student.correct || 0) + (state.student.wrong || 0);
+  const owned = Object.values(state.data?.territories || {}).filter(t => t.ownerStudentId === state.student.id).length;
+  $('#missionBadge').textContent = answered < 20
+    ? `任務：再答 ${20 - answered} 題達成今日練習`
+    : owned < 3
+    ? `任務：再搶 ${3 - owned} 個樓主名牌`
+    : '任務：已達成，挑戰連勝 10 題';
+}
+
+function cardShortName(item) {
+  return {
+    boost: '重擊',
+    repair: '修復',
+    shield: '防護',
+    steal: '偷錢',
+    freeze: '干擾',
+    rent: '收租',
+    flag: '奪旗',
+  }[item] || item;
 }
 
 function roleInfo(role) {
@@ -553,13 +575,14 @@ function renderHtmlMapOverlay() {
     const top = (zone.y / 888) * 100;
     const width = (zone.w / 1243) * 100;
     const height = (zone.h / 888) * 100;
-    const ownerMeta = ownerClass ? `${ownerClass} ${territory.ownerStudentName || ''}`.trim() : '';
+    const ownerMeta = ownerClass ? `${ownerClass} ${territory.ownerStudentName || '領先'}`.trim() : '';
     const share502 = territory.maxHp ? Math.round(((territory.progress?.['502'] || 0) / territory.maxHp) * 100) : 0;
     const share503 = territory.maxHp ? Math.round(((territory.progress?.['503'] || 0) / territory.maxHp) * 100) : 0;
-    const progressMeta = `502 ${share502}%｜503 ${share503}%`;
+    const progressMeta = `${territory.progress?.['502'] || 0}/${territory.maxHp} | ${territory.progress?.['503'] || 0}/${territory.maxHp}`;
+    const leadClass = share502 === share503 ? '' : share502 > share503 ? '502' : '503';
     const isCompact = zone.w < 130 || zone.h < 120;
     const showOwner = Boolean(ownerMeta);
-    const showProgress = false;
+    const showProgress = selected || !showOwner;
     return `
       <button
         class="map-zone-card ${isRoom ? 'room-card' : ''} ${isRoad ? 'road-card' : ''} ${isMega ? 'mega-card' : ''} ${isCompact ? 'compact-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''} ${isMine ? 'mine' : ''} ${selected ? 'selected' : ''}"
@@ -569,7 +592,7 @@ function renderHtmlMapOverlay() {
         aria-label="${escapeHtml(`${name} ${ownerMeta || progressMeta}`)}"
       >
         <span>${escapeHtml(name)}</span>
-        ${showOwner ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : ''}
+        ${showOwner ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : leadClass ? `<small class="zone-owner-name">${leadClass} 推進中</small>` : ''}
         ${showProgress ? `<small class="zone-status">${escapeHtml(progressMeta)}</small>` : ''}
         <div class="zone-battle-bar" aria-hidden="true">
           <i class="bar-502" style="width:${share502}%"></i>
@@ -643,12 +666,20 @@ function selectTerritory(name) {
 function renderTargetInfo() {
   const owner = $('#targetOwner');
   const power = $('#targetPower');
+  const need = $('#targetNeed');
+  const lead = $('#targetLead');
+  const bar502 = $('#targetBar502');
+  const bar503 = $('#targetBar503');
   if (!owner || !power) return;
   const territory = state.target ? state.data?.territories?.[state.target] : null;
   if (!territory) {
     owner.textContent = '目前尚未被佔領';
     owner.className = 'target-owner';
     power.textContent = '先點地圖上的教室或據點。';
+    if (need) need.textContent = '先點地圖選擇目標';
+    if (lead) lead.textContent = '尚未開戰';
+    if (bar502) bar502.style.width = '0%';
+    if (bar503) bar503.style.width = '0%';
     return;
   }
 
@@ -656,6 +687,21 @@ function renderTargetInfo() {
   const p503 = territory.progress?.['503'] || 0;
   const share502 = territory.maxHp ? Math.round((p502 / territory.maxHp) * 100) : 0;
   const share503 = territory.maxHp ? Math.round((p503 / territory.maxHp) * 100) : 0;
+  const myClass = state.student?.classNum;
+  const myProgress = territory.progress?.[myClass] || 0;
+  const otherProgress = territory.progress?.[otherClass(myClass)] || 0;
+  const leadingClass = p502 === p503 ? '' : p502 > p503 ? '502' : '503';
+
+  if (bar502) bar502.style.width = `${share502}%`;
+  if (bar503) bar503.style.width = `${share503}%`;
+  if (lead) {
+    lead.textContent = leadingClass
+      ? `${leadingClass} 領先`
+      : '雙方拉鋸';
+  }
+  if (need) {
+    need.textContent = targetNeedText(territory, myClass, myProgress, otherProgress);
+  }
 
   if (territory.ownerClass) {
     owner.textContent = `目前：${territory.ownerClass} ${territory.ownerStudentName || ''} 領先 · 502 ${p502}/${territory.maxHp} (${share502}%) / 503 ${p503}/${territory.maxHp} (${share503}%)`;
@@ -665,6 +711,25 @@ function renderTargetInfo() {
     owner.className = 'target-owner';
   }
   power.textContent = territoryEffectText(territory.name) || territory.power || '答題成功就能推進。';
+}
+
+function targetNeedText(territory, myClass, myProgress, otherProgress) {
+  if (!myClass) return '請先登入';
+  if (territory.ownerClass === myClass) {
+    const lead = Math.max(0, myProgress - otherProgress);
+    const danger = Math.max(0, TAKEOVER_MARGIN - lead);
+    return danger > 0 ? `守住這棟：再領先 ${danger} 格更穩` : `目前守住，領先 ${lead} 格`;
+  }
+  const needToOpen = Math.max(0, CLAIM_THRESHOLD - myProgress);
+  const needToOvertake = territory.ownerClass
+    ? Math.max(0, otherProgress + TAKEOVER_MARGIN - myProgress)
+    : needToOpen;
+  const needed = Math.max(needToOpen, needToOvertake);
+  return needed > 0 ? `再推進 ${needed} 格可取得領先` : '下一題答對就可能翻盤';
+}
+
+function otherClass(classNum) {
+  return classNum === '502' ? '503' : '502';
 }
 
 function territoryEffectText(name) {
@@ -708,6 +773,7 @@ function renderShop() {
   $('#cardFreeze').textContent = cards.freeze || 0;
   $('#cardRent').textContent = cards.rent || 0;
   $('#cardFlag').textContent = cards.flag || 0;
+  renderOwnedCardsSummary(cards);
 
   const opponents = Object.values(state.data.students)
     .filter(student => student.id !== state.student.id)
@@ -725,6 +791,21 @@ function renderShop() {
     if (small) small.textContent = `${itemCost(item)} 金幣`;
   });
   $('#raidButton').textContent = `突襲 ${itemCost('raid')}`;
+}
+
+function renderOwnedCardsSummary(cards) {
+  const box = $('#ownedCardsSummary');
+  if (!box) return;
+  const owned = CARD_ORDER.filter(item => (cards[item] || 0) > 0);
+  if (!owned.length) {
+    box.innerHTML = '<span class="empty-cards">目前沒有卡。答對題目或打開商店可取得卡牌。</span>';
+    return;
+  }
+  box.innerHTML = owned.map(item => `
+    <button class="owned-card-pill" data-owned-card="${item}" type="button">
+      ${escapeHtml(cardShortName(item))}<b>${cards[item]}</b>
+    </button>
+  `).join('');
 }
 
 function itemCost(item) {
@@ -1189,6 +1270,14 @@ function showReward(payload) {
   const result = payload.result || {};
 
   if (payload.correct) {
+    const streak = payload.student.streak || 0;
+    const streakLine = streak >= 10
+      ? `連勝 ${streak}：補給加碼`
+      : streak >= 5
+      ? `連勝 ${streak}：重擊加成`
+      : streak >= 3
+      ? `連勝 ${streak}：金幣加成`
+      : `連勝 ${streak}`;
     kicker.textContent = '攻擊獎勵';
     title.textContent = result.captured
       ? `${result.territoryName} 守擂成功`
@@ -1197,14 +1286,15 @@ function showReward(payload) {
       result.captured ? `<div class="reward-line dojo-line">${escapeHtml(payload.student.classNum)} ${escapeHtml(payload.student.name)} 的據點</div>` : '',
       `<div class="reward-line">土地攻擊 +${result.attack || 1}</div>`,
       `<div class="reward-line">金幣 +${result.coins || 0}</div>`,
-      `<div class="reward-line">連勝 ${payload.student.streak || 0}</div>`,
+      `<div class="reward-line streak-line">${escapeHtml(streakLine)}</div>`,
+      result.neededText ? `<div class="reward-line">${escapeHtml(result.neededText)}</div>` : '',
       result.card ? `<div class="reward-line">${escapeHtml(result.card)} 已加入卡牌區</div>` : '',
     ].join('');
   } else {
     kicker.textContent = '遭到反擊';
     title.textContent = '答錯了';
     body.innerHTML = [
-      '<div class="reward-line">土地被對方反推</div>',
+      '<div class="reward-line">小幅反擊：你的進度退 1 格，對方推進 1 格</div>',
       '<div class="reward-line">這題已記到老師錯題面板</div>',
     ].join('');
   }
@@ -1272,6 +1362,11 @@ $$('.help-dot').forEach(button => {
   });
 });
 $('#raidButton').addEventListener('click', () => useShopItem('raid'));
+$('#ownedCardsSummary').addEventListener('click', event => {
+  const button = event.target.closest('[data-owned-card]');
+  if (!button) return;
+  useCardItem(button.dataset.ownedCard);
+});
 $('#rewardCloseButton').addEventListener('click', () => {
   $('#rewardModal').hidden = true;
 });
