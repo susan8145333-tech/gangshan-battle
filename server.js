@@ -191,12 +191,34 @@ function buildPhonicsQuestions() {
   const questions = [];
   const phonicsLevelName = '第三關 Phonics 聽力';
   const listeningPrompt = '聽音，選出你聽到的答案。';
+  const phonicsSoundMap = {
+    a: 'short a',
+    b: 'buh',
+    c: 'kuh',
+    d: 'duh',
+    g: 'guh',
+    h: 'huh',
+    j: 'juh',
+    k: 'kuh',
+    m: 'mmm',
+    n: 'nnn',
+    p: 'puh',
+    r: 'ruh',
+    t: 'tuh',
+    ch: 'chuh',
+    sh: 'shh',
+    th: 'thuh',
+    ph: 'fuh',
+  };
+  const phonicsSpeakMap = options => Object.fromEntries(
+    options.map(option => [option, phonicsSoundMap[option] || option])
+  );
 
   const addListeningSet = (prefix, options, prompt = listeningPrompt, speakMap = {}) => {
     options.forEach((answer, index) => {
       questions.push({
         id: `${prefix}${String(index + 1).padStart(2, '0')}`,
-        en: speakMap[answer] || answer,
+        en: answer,
         zh: answer,
         speak: speakMap[answer] || answer,
         prompt,
@@ -208,11 +230,11 @@ function buildPhonicsQuestions() {
     });
   };
 
-  addListeningSet('ph-letter-b-', ['p', 'b', 'd', 't'], '聽音，選出正確字母。');
-  addListeningSet('ph-letter-n-', ['m', 'h', 'n', 'r'], '聽音，選出正確字母。');
-  addListeningSet('ph-letter-g-', ['j', 'k', 'g', 'c'], '聽音，選出正確字母。');
-  addListeningSet('ph-digraph-sh-', ['th', 'ch', 'sh', 'ph'], '聽音，選出正確字母組合。');
-  addListeningSet('ph-digraph-ph-', ['sh', 'ch', 'th', 'ph'], '聽音，選出正確字母組合。');
+  addListeningSet('ph-letter-b-', ['p', 'b', 'd', 't'], '聽音，選出正確字母音。', phonicsSpeakMap(['p', 'b', 'd', 't']));
+  addListeningSet('ph-letter-n-', ['m', 'h', 'n', 'r'], '聽音，選出正確字母音。', phonicsSpeakMap(['m', 'h', 'n', 'r']));
+  addListeningSet('ph-letter-g-', ['j', 'k', 'g', 'c'], '聽音，選出正確字母音。', phonicsSpeakMap(['j', 'k', 'g', 'c']));
+  addListeningSet('ph-digraph-sh-', ['th', 'ch', 'sh', 'ph'], '聽音，選出正確字母組合音。', phonicsSpeakMap(['th', 'ch', 'sh', 'ph']));
+  addListeningSet('ph-digraph-ph-', ['sh', 'ch', 'th', 'ph'], '聽音，選出正確字母組合音。', phonicsSpeakMap(['sh', 'ch', 'th', 'ph']));
 
   [
     ['ph-vowel-a-', ['hat', 'hate', 'hit', 'hot', 'map']],
@@ -227,8 +249,8 @@ function buildPhonicsQuestions() {
     addListeningSet(prefix, options, '聽單字，選出你聽到的單字。');
   });
 
-  addListeningSet('ph-past-letter-n-', ['a', 'n', 'm'], '聽音，選出正確字母。');
-  addListeningSet('ph-past-letter-g-', ['t', 'k', 'g'], '聽音，選出正確字母。');
+  addListeningSet('ph-past-letter-n-', ['a', 'n', 'm'], '聽音，選出正確字母音。', phonicsSpeakMap(['a', 'n', 'm']));
+  addListeningSet('ph-past-letter-g-', ['t', 'k', 'g'], '聽音，選出正確字母音。', phonicsSpeakMap(['t', 'k', 'g']));
 
   [
     ['ph-past-short-i-tip-', ['tip', 'top', 'tap', 'sip']],
