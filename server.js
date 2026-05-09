@@ -108,6 +108,23 @@ const QUESTIONS = [
   { id: 'f33', en: 'ghost', zh: '鬼' },
   { id: 'f34', en: 'vampire', zh: '吸血鬼' },
   { id: 'f35', en: 'candy', zh: '糖果' },
+  { id: 'f36', en: 'red envelope', zh: '紅包' },
+  { id: 'f37', en: 'zongzi', zh: '粽子' },
+  { id: 'f38', en: 'dragon boat race', zh: '龍舟競賽' },
+  { id: 'f39', en: 'pomelo', zh: '柚子' },
+  { id: 'f40', en: 'egg hunt', zh: '獵蛋' },
+  { id: 'f41', en: 'Easter bunny', zh: '復活節兔子' },
+  { id: 'f42', en: 'Christmas Eve', zh: '聖誕夜' },
+  { id: 'f43', en: 'card', zh: '卡片' },
+  { id: 'f44', en: 'carnation', zh: '康乃馨' },
+  { id: 'f45', en: 'flowers', zh: '花' },
+  { id: 'f46', en: 'family dinner', zh: '家庭晚餐' },
+  { id: 'f47', en: 'pumpkin', zh: '南瓜' },
+  { id: 'f48', en: 'candies', zh: '糖果' },
+  { id: 'f49', en: 'reindeer', zh: '馴鹿' },
+  { id: 'f50', en: 'birthday', zh: '生日' },
+  { id: 'f51', en: 'birthday card', zh: '生日卡片' },
+  { id: 'f52', en: 'barbecue', zh: '烤肉' },
 ].map(q => ({ ...q, level: 'festival', levelName: '第二關 節慶英語' })))
   .concat(buildPhonicsQuestions())
   .concat(buildFinalReviewQuestions());
@@ -245,6 +262,14 @@ function buildPhonicsQuestions() {
     ['ph-vowel-o-', ['hop', 'hope', 'hug', 'hap', 'dog']],
     ['ph-vowel-ae-', ['make', 'back', 'neck', 'game', 'pick']],
     ['ph-vowel-ee-', ['see', 'sin', 'sun', 'son', 'team']],
+    ['ph-past-rack-rock-', ['rack', 'rock', 'ruck', 'rice', 'ride']],
+    ['ph-past-ship-chip-', ['ship', 'chip', 'sip', 'zip', 'sheep']],
+    ['ph-past-cat-get-', ['cat', 'get', 'cap', 'cup', 'cop']],
+    ['ph-past-fill-feel-2-', ['fear', 'fill', 'feel', 'fall', 'full']],
+    ['ph-past-book-cook-', ['book', 'cook', 'look', 'box', 'bus']],
+    ['ph-past-tie-toy-', ['tie', 'toy', 'too', 'tea', 'day']],
+    ['ph-past-write-read-', ['write', 'read', 'ride', 'rude', 'red']],
+    ['ph-past-hot-dog-', ['hot dog', 'hamburger', 'sandwich', 'noodles', 'dumpling']],
   ].forEach(([prefix, options]) => {
     addListeningSet(prefix, options, '聽單字，選出你聽到的單字。');
   });
@@ -375,6 +400,34 @@ function buildFinalReviewQuestions() {
       levelName,
     });
   };
+  const makeOptions = (answer, pool, seed = 0) => {
+    const uniquePool = [...new Set(pool.filter(item => item && item !== answer))];
+    const options = [answer];
+    let cursor = seed % Math.max(uniquePool.length, 1);
+    while (options.length < 4 && uniquePool.length) {
+      const next = uniquePool[cursor % uniquePool.length];
+      if (!options.includes(next)) options.push(next);
+      cursor += 3;
+    }
+    const fallback = ['不知道', '以上皆非', '相反意思', '相近意思'];
+    fallback.forEach(item => {
+      if (options.length < 4 && !options.includes(item)) options.push(item);
+    });
+    const shift = seed % options.length;
+    return options.slice(shift).concat(options.slice(0, shift));
+  };
+  const addPairReviewQuestions = (prefix, pairs) => {
+    const meanings = pairs.map(([, zh]) => zh);
+    pairs.forEach(([en, zh], index) => {
+      add(
+        `${prefix}-${String(index + 1).padStart(3, '0')}`,
+        `選出中文：${en}`,
+        zh,
+        makeOptions(zh, meanings, index),
+        `${en} ${zh}`
+      );
+    });
+  };
 
   [
     ['fr-class-01', 'May I come in?', '我可以進來嗎？', ['請坐下。', '我可以進來嗎？', '請舉手。', '請站起來。']],
@@ -456,6 +509,317 @@ function buildFinalReviewQuestions() {
     ['fr-vocab-07', 'rice dumpling', '粽子', ['粽子', '春捲', '水餃', '月餅']],
     ['fr-vocab-08', 'spring roll', '春捲', ['水餃', '柚子', '火雞', '春捲']],
   ].forEach(([id, en, answer, options]) => add(id, `選出中文：${en}`, answer, options, `${en} ${answer}`));
+
+  addPairReviewQuestions('fr-exam-place', [
+    ['bank', '銀行'],
+    ['zoo', '動物園'],
+    ['school', '學校'],
+    ['home', '家'],
+    ['yard', '院子'],
+    ['shop', '商店'],
+    ['market', '市場'],
+    ['night market', '夜市'],
+    ['movie theater', '電影院'],
+    ['classroom', '教室'],
+    ['bathroom', '浴室'],
+    ['bedroom', '臥室'],
+    ['kitchen', '廚房'],
+    ['post office', '郵局'],
+    ['on Red Street', '在紅街'],
+    ['at home', '在家'],
+    ['at school', '在學校'],
+    ['at the park', '在公園'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-transport', [
+    ['by bike', '騎腳踏車'],
+    ['by scooter', '騎機車'],
+    ['by taxi', '坐計程車'],
+    ['by plane', '坐飛機'],
+    ['by train', '坐火車'],
+    ['by ship', '坐船'],
+    ['on foot', '走路'],
+    ['airplane', '飛機'],
+    ['bus', '公車'],
+    ['train', '火車'],
+    ['bike', '腳踏車'],
+    ['scooter', '機車'],
+    ['car', '汽車'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-body-animal', [
+    ['head', '頭'],
+    ['eyes', '眼睛'],
+    ['ears', '耳朵'],
+    ['nose', '鼻子'],
+    ['mouth', '嘴巴'],
+    ['finger', '手指'],
+    ['arm', '手臂'],
+    ['leg', '腿'],
+    ['foot', '腳'],
+    ['feet', '腳'],
+    ['monkey', '猴子'],
+    ['lion', '獅子'],
+    ['tiger', '老虎'],
+    ['zebra', '斑馬'],
+    ['horse', '馬'],
+    ['rabbit', '兔子'],
+    ['elephant', '大象'],
+    ['bear', '熊'],
+    ['frog', '青蛙'],
+    ['pig', '豬'],
+    ['goat', '山羊'],
+    ['turtle', '烏龜'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-food', [
+    ['breakfast', '早餐'],
+    ['lunch', '午餐'],
+    ['dinner', '晚餐'],
+    ['rice', '米飯'],
+    ['noodles', '麵'],
+    ['pizza', '披薩'],
+    ['dumpling', '水餃'],
+    ['hamburger', '漢堡'],
+    ['hot dog', '熱狗'],
+    ['sandwich', '三明治'],
+    ['juice', '果汁'],
+    ['milk', '牛奶'],
+    ['tea', '茶'],
+    ['water', '水'],
+    ['jam', '果醬'],
+    ['ice cream', '冰淇淋'],
+    ['cookies', '餅乾'],
+    ['corn', '玉米'],
+    ['potato', '馬鈴薯'],
+    ['pumpkin pie', '南瓜派'],
+    ['apple', '蘋果'],
+    ['banana', '香蕉'],
+    ['grape', '葡萄'],
+    ['orange', '柳橙'],
+    ['papaya', '木瓜'],
+    ['watermelon', '西瓜'],
+    ['strawberry', '草莓'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-clothes-color', [
+    ['shirt', '襯衫'],
+    ['T-shirt', 'T恤'],
+    ['shorts', '短褲'],
+    ['skirt', '裙子'],
+    ['shoes', '鞋子'],
+    ['socks', '襪子'],
+    ['jacket', '夾克'],
+    ['coat', '外套'],
+    ['gloves', '手套'],
+    ['hat', '帽子'],
+    ['cap', '鴨舌帽'],
+    ['bag', '包包'],
+    ['sunglasses', '太陽眼鏡'],
+    ['watch', '手錶'],
+    ['red', '紅色'],
+    ['blue', '藍色'],
+    ['green', '綠色'],
+    ['yellow', '黃色'],
+    ['black', '黑色'],
+    ['white', '白色'],
+    ['gray', '灰色'],
+    ['brown', '棕色'],
+    ['pink', '粉紅色'],
+    ['purple', '紫色'],
+    ['orange', '橘色'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-weather-emotion', [
+    ['sunny', '晴天'],
+    ['rainy', '下雨'],
+    ['cloudy', '多雲'],
+    ['windy', '颳風'],
+    ['snowy', '下雪'],
+    ['hot', '熱'],
+    ['warm', '溫暖'],
+    ['cold', '冷'],
+    ['happy', '開心'],
+    ['sad', '傷心'],
+    ['angry', '生氣'],
+    ['hungry', '餓'],
+    ['thirsty', '口渴'],
+    ['sick', '生病'],
+    ['tired', '累'],
+    ['sleepy', '想睡'],
+    ['bored', '無聊'],
+    ['excited', '興奮'],
+    ['afraid', '害怕'],
+    ['cry', '哭'],
+    ['smile', '微笑'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-action', [
+    ['dance', '跳舞'],
+    ['draw', '畫畫'],
+    ['fly', '飛'],
+    ['jump', '跳'],
+    ['read', '閱讀'],
+    ['sing', '唱歌'],
+    ['swim', '游泳'],
+    ['run', '跑步'],
+    ['walk', '走路'],
+    ['sleep', '睡覺'],
+    ['drink', '喝'],
+    ['watch TV', '看電視'],
+    ['play basketball', '打籃球'],
+    ['play football', '踢足球'],
+    ['play tennis', '打網球'],
+    ['ride a bike', '騎腳踏車'],
+    ['fly a kite', '放風箏'],
+    ['go camping', '去露營'],
+    ['go swimming', '去游泳'],
+    ['go shopping', '去購物'],
+    ['go fishing', '去釣魚'],
+    ['take a nap', '小睡片刻'],
+    ['wash the dishes', '洗碗'],
+    ['brush your teeth', '刷牙'],
+    ['comb your hair', '梳頭'],
+    ['take a bath', '洗澡'],
+    ['wash your face', '洗臉'],
+    ['do my homework', '寫功課'],
+    ['clean the room', '打掃房間'],
+    ['read story books', '讀故事書'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-family-job-health', [
+    ['father', '爸爸'],
+    ['mother', '媽媽'],
+    ['brother', '哥哥'],
+    ['sister', '姊姊'],
+    ['grandpa', '爺爺'],
+    ['grandma', '奶奶'],
+    ['aunt', '阿姨'],
+    ['uncle', '叔叔'],
+    ['family', '家人'],
+    ['teacher', '老師'],
+    ['student', '學生'],
+    ['nurse', '護士'],
+    ['cook', '廚師'],
+    ['singer', '歌手'],
+    ['job', '工作'],
+    ['headache', '頭痛'],
+    ['toothache', '牙痛'],
+    ['stomachache', '胃痛'],
+    ['runny nose', '流鼻水'],
+    ['hand hurts', '手痛'],
+    ['fall down', '摔倒'],
+    ['hurt', '受傷'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-time-number', [
+    ['Monday', '星期一'],
+    ['Tuesday', '星期二'],
+    ['Wednesday', '星期三'],
+    ['Thursday', '星期四'],
+    ['Friday', '星期五'],
+    ['Saturday', '星期六'],
+    ['Sunday', '星期天'],
+    ['morning', '早上'],
+    ['afternoon', '下午'],
+    ['night', '晚上'],
+    ['today', '今天'],
+    ['April', '四月'],
+    ['twelve', '十二'],
+    ['thirteen', '十三'],
+    ['fourteen', '十四'],
+    ['fifteen', '十五'],
+    ['sixteen', '十六'],
+    ['seventeen', '十七'],
+    ['eighteen', '十八'],
+    ['nineteen', '十九'],
+    ['twenty', '二十'],
+    ['thirty', '三十'],
+    ['forty', '四十'],
+    ['fifty', '五十'],
+    ['sixty', '六十'],
+    ['seventy', '七十'],
+    ['eighty', '八十'],
+    ['ninety', '九十'],
+    ['one hundred', '一百'],
+    ['thousand', '一千'],
+    ['ten thousand', '一萬'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-sentence', [
+    ['Watch out!', '小心！'],
+    ['Are you OK?', '你沒事吧？'],
+    ['Help!', '救命！'],
+    ['Of course.', '當然。'],
+    ['Here you are.', '這個給你。'],
+    ['Hurry up!', '快一點！'],
+    ['Good idea.', '好主意。'],
+    ['What do you want?', '你想要什麼？'],
+    ['I want some juice.', '我想要一些果汁。'],
+    ['Can you swim?', '你會游泳嗎？'],
+    ['Yes, I can.', '是的，我會。'],
+    ["No, I can't.", '不，我不會。'],
+    ['Do you like papayas?', '你喜歡木瓜嗎？'],
+    ['Yes, I do.', '是的，我喜歡。'],
+    ["No, I don't.", '不，我不喜歡。'],
+    ['What are these?', '這些是什麼？'],
+    ["They're papayas.", '它們是木瓜。'],
+    ['Where are you going?', '你要去哪裡？'],
+    ['What time do you go to school?', '你幾點去學校？'],
+    ['Where is Tom?', 'Tom 在哪裡？'],
+    ['In his room.', '在他的房間。'],
+    ['How are you today?', '你今天過得如何？'],
+    ["I'm fine.", '我很好。'],
+    ['How old are you?', '你幾歲？'],
+    ["I'm five.", '我五歲。'],
+    ['How much is it?', '多少錢？'],
+    ['Who is he?', '他是誰？'],
+    ['Can you give me a hand?', '可以幫我嗎？'],
+    ['Whose socks are they?', '這些襪子是誰的？'],
+    ['How many tigers are there?', '有幾隻老虎？'],
+    ['How many tigers are there in the zoo?', '動物園裡有幾隻老虎？'],
+    ['What are you doing?', '你正在做什麼？'],
+    ['I am angry.', '我很生氣。'],
+    ['I am good.', '我很好。'],
+    ['Is your ball in the dining room?', '你的球在飯廳嗎？'],
+    ['This is for you.', '這個給你。'],
+    ["You're welcome.", '不客氣。'],
+    ['I like to go to school.', '我喜歡去學校。'],
+    ['Let me help you.', '讓我幫你。'],
+    ['Thank you. You are so kind.', '謝謝你，你人真好。'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-direction', [
+    ['on', '在上面'],
+    ['in', '在裡面'],
+    ['under', '在下面'],
+    ['next to', '在旁邊'],
+    ['behind', '在後面'],
+    ['in front of', '在前面'],
+    ['under the tree', '在樹下'],
+    ['sit on the table', '坐在桌子上'],
+  ]);
+
+  addPairReviewQuestions('fr-exam-school-object', [
+    ['book', '書'],
+    ['pencil', '鉛筆'],
+    ['ruler', '尺'],
+    ['eraser', '橡皮擦'],
+    ['scissors', '剪刀'],
+    ['homework', '功課'],
+    ['gift', '禮物'],
+    ['ball', '球'],
+    ['doll', '娃娃'],
+    ['door', '門'],
+    ['box', '盒子'],
+    ['cup', '杯子'],
+    ['price', '價格'],
+    ['dollar', '元'],
+    ['allowance', '零用錢'],
+    ['timetable', '時間表'],
+    ['movie', '電影'],
+    ['trip', '旅行'],
+  ]);
 
   const moonPassage = 'Reading: Amy is celebrating Moon Festival. Her family has a barbecue tonight. They eat moon cakes and pomelos. Grandma tells stories about the moon.';
   add('fr-read-moon-01', `${moonPassage}\nWhat festival is today?`, 'Moon Festival', ['Halloween', 'Christmas', 'Moon Festival', 'Dragon Boat Festival'], 'Today is Moon Festival.');
