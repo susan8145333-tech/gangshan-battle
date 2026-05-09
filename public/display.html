@@ -41,17 +41,20 @@
         <div id="displayMapOverlay" class="map-html-overlay display-map-overlay" aria-label="投影戰場"></div>
       </div>
       <aside class="display-side">
-        <section class="display-card">
-          <h2>特殊據點</h2>
-          <div id="displayPowers" class="power-list"></div>
-        </section>
-        <section class="display-card">
-          <h2>排行榜</h2>
-          <div id="displayLeaders" class="leaderboard-list"></div>
+        <section class="display-card display-ranking-card">
+          <div class="display-card-heading">
+            <h2>學生 Ranking</h2>
+            <span id="displayRankingCount">0 人</span>
+          </div>
+          <div id="displayLeaders" class="display-ranking-list"></div>
         </section>
         <section class="display-card">
           <h2>即時戰況</h2>
           <div id="displayEvents" class="display-events"></div>
+        </section>
+        <section class="display-card">
+          <h2>特殊據點</h2>
+          <div id="displayPowers" class="power-list"></div>
         </section>
       </aside>
     </section>

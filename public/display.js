@@ -142,13 +142,22 @@ function renderPowers() {
 }
 
 function renderLeaders() {
-  $('#displayLeaders').innerHTML = (data.leaderboard || []).map(row => `
-    <div class="leader-row">
-      <b>#${row.rank}</b>
-      <span>${row.classNum} ${escapeHtml(row.name)}</span>
-      <small>${row.score}分 · ${escapeHtml(row.roleName || '')} · ${row.lands}地</small>
-    </div>
-  `).join('') || '<small>等待學生加入。</small>';
+  const rows = (data.rankings || data.leaderboard || []).slice(0, 10);
+  const total = (data.rankings || data.leaderboard || []).length;
+  $('#displayRankingCount').textContent = `${total} 人`;
+  $('#displayLeaders').innerHTML = rows.length
+    ? rows.map(row => `
+      <div class="display-rank-row rank-${row.rank <= 3 ? row.rank : 'normal'} class-${row.classNum}">
+        <b>#${row.rank}</b>
+        <span>
+          <strong>${row.classNum} ${escapeHtml(row.name)}</strong>
+          <small>${escapeHtml(row.levelName || '')}</small>
+        </span>
+        <em>${row.score} 分</em>
+        <small class="display-rank-meta">${row.lands} 地 · ${row.answered} 題 · 攻 ${row.attackPower}</small>
+      </div>
+    `).join('')
+    : '<div class="display-rank-empty">等待學生加入。</div>';
 }
 
 function renderEvents() {
