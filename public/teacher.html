@@ -189,29 +189,34 @@
       </div>
     </section>
 
-    <section class="teacher-card wide">
-      <h2>錯題整理</h2>
-      <div id="wrongList" class="wrong-list"></div>
-    </section>
-
-    <section class="teacher-card wide">
-      <h2>最近答題明細</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>時間</th>
-              <th>班級</th>
-              <th>英文名字</th>
-              <th>土地</th>
-              <th>關卡</th>
-              <th>英文</th>
-              <th>學生答案</th>
-              <th>結果</th>
-            </tr>
-          </thead>
-          <tbody id="answerRows"></tbody>
-        </table>
+    <section id="learningRecordsSection" class="teacher-card wide">
+      <div class="section-heading">
+        <h2>學生學習紀錄</h2>
+        <span id="recordStudentCount">0 人</span>
+      </div>
+      <div class="student-record-grid">
+        <aside id="studentRecordList" class="student-record-list"></aside>
+        <div class="student-record-detail">
+          <div id="studentRecordSummary" class="student-record-summary"></div>
+          <h3>錯題整理</h3>
+          <div id="wrongList" class="wrong-list"></div>
+          <h3>答題明細</h3>
+          <div class="table-wrap record-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>時間</th>
+                  <th>土地</th>
+                  <th>關卡</th>
+                  <th>英文</th>
+                  <th>學生答案</th>
+                  <th>結果</th>
+                </tr>
+              </thead>
+              <tbody id="answerRows"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
   </main>

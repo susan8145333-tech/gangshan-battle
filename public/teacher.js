@@ -31,6 +31,7 @@ let selectedLevelFilter = 'all';
 let selectedQuestionLevel = 'classroom';
 let selectedQuestionIds = new Set();
 let assignStatusMessage = '';
+let selectedRecordStudentId = '';
 
 const $ = selector => document.querySelector(selector);
 const BACKUP_KEY = 'gangshan-battle-teacher-backup-v1';
@@ -146,14 +147,14 @@ function render() {
   renderDifferentiationPanel();
   renderStudents();
   renderQuestions();
-  renderWrongList();
+  renderStudentRecords();
   renderRecordings();
-  renderAnswerLog();
 }
 
 function pruneSelections() {
   const validStudents = new Set(Object.keys(data.students || {}));
   selectedStudentIds = new Set([...selectedStudentIds].filter(id => validStudents.has(id)));
+  if (selectedRecordStudentId && !validStudents.has(selectedRecordStudentId)) selectedRecordStudentId = '';
   const validQuestions = new Set((data.questions || []).map(q => q.id));
   selectedQuestionIds = new Set([...selectedQuestionIds].filter(id => validQuestions.has(id)));
 }
@@ -341,7 +342,11 @@ function renderStudents() {
           <input type="checkbox" data-student-select="${escapeHtml(student.id)}" ${selectedStudentIds.has(student.id) ? 'checked' : ''} aria-label="選取 ${escapeHtml(student.name)}">
         </td>
         <td>${student.classNum}</td>
-        <td>${escapeHtml(student.name)}</td>
+        <td>
+          <button class="link-button" type="button" data-record-student="${escapeHtml(student.id)}">
+            ${escapeHtml(student.name)}
+          </button>
+        </td>
         <td>${escapeHtml(roleName(student.role))}</td>
         <td>${student.score || 0}</td>
         <td>${student.coins || 0}</td>
@@ -369,6 +374,9 @@ function renderStudents() {
 
   document.querySelectorAll('[data-student-level]').forEach(button => {
     button.addEventListener('click', () => setStudentLevel(button.dataset.studentLevel, button.dataset.nextLevel));
+  });
+  document.querySelectorAll('[data-record-student]').forEach(button => {
+    button.addEventListener('click', () => selectRecordStudent(button.dataset.recordStudent, true));
   });
   $('#studentRows').querySelectorAll('[data-student-select]').forEach(input => {
     input.addEventListener('change', () => {
@@ -470,26 +478,114 @@ function renderQuestions() {
   });
 }
 
-function renderWrongList() {
-  const rows = [];
-  Object.values(data.students).forEach(student => {
-    Object.values(student.wrongLog || {}).forEach(item => {
-      rows.push({ ...item, classNum: student.classNum, name: student.name });
-    });
-  });
-  rows.sort((a, b) => b.count - a.count || a.classNum.localeCompare(b.classNum) || a.name.localeCompare(b.name));
+function renderStudentRecords() {
+  const students = Object.values(data.students || {})
+    .sort((a, b) => a.classNum.localeCompare(b.classNum) || a.name.localeCompare(b.name));
+  if (!selectedRecordStudentId && students.length) selectedRecordStudentId = students[0].id;
+  const selected = data.students?.[selectedRecordStudentId] || students[0] || null;
+  if (selected) selectedRecordStudentId = selected.id;
 
-  $('#wrongList').innerHTML = rows.length
-    ? rows.slice(0, 80).map(item => `
+  $('#recordStudentCount').textContent = `${students.length} 人`;
+  $('#studentRecordList').innerHTML = students.length
+    ? students.map(student => {
+      const answers = answerRowsForStudent(student.id);
+      const wrongCount = Object.values(student.wrongLog || {}).reduce((sum, item) => sum + (item.count || 0), 0);
+      const total = (student.correct || 0) + (student.wrong || 0);
+      const rate = total ? `${Math.round((student.correct || 0) / total * 100)}%` : '-';
+      const latest = answers[0]?.ts ? formatTime(answers[0].ts) : '尚未答題';
+      return `
+        <button class="student-record-button ${student.id === selectedRecordStudentId ? 'selected' : ''}" type="button" data-record-pick="${escapeHtml(student.id)}">
+          <span>
+            <strong>${student.classNum} ${escapeHtml(student.name)}</strong>
+            <small>${escapeHtml(getLevelInfo(student).currentLevelName)}</small>
+          </span>
+          <b>${total} 題</b>
+          <small>錯 ${wrongCount} · 正確率 ${rate} · ${latest}</small>
+        </button>
+      `;
+    }).join('')
+    : '<p class="empty-cards">學生登入後會出現在這裡。</p>';
+
+  $('#studentRecordList').querySelectorAll('[data-record-pick]').forEach(button => {
+    button.addEventListener('click', () => selectRecordStudent(button.dataset.recordPick));
+  });
+
+  renderSelectedStudentRecord(selected);
+}
+
+function renderSelectedStudentRecord(student) {
+  if (!student) {
+    $('#studentRecordSummary').innerHTML = '<p>目前沒有學生資料。</p>';
+    $('#wrongList').innerHTML = '';
+    $('#answerRows').innerHTML = '';
+    return;
+  }
+
+  const answers = answerRowsForStudent(student.id);
+  const wrongRows = wrongRowsForStudent(student);
+  const total = (student.correct || 0) + (student.wrong || 0);
+  const rate = total ? `${Math.round((student.correct || 0) / total * 100)}%` : '-';
+  const level = getLevelInfo(student);
+  $('#studentRecordSummary').innerHTML = `
+    <div>
+      <span>目前查看</span>
+      <strong>${student.classNum} ${escapeHtml(student.name)}</strong>
+      <small>${escapeHtml(level.currentLevelName)}</small>
+    </div>
+    <dl>
+      <div><dt>答題</dt><dd>${total}</dd></div>
+      <div><dt>答對</dt><dd>${student.correct || 0}</dd></div>
+      <div><dt>答錯</dt><dd>${student.wrong || 0}</dd></div>
+      <div><dt>正確率</dt><dd>${rate}</dd></div>
+      <div><dt>錄音</dt><dd>${student.recordingCount || 0}</dd></div>
+      <div><dt>指定題</dt><dd>${Array.isArray(student.assignedQuestionIds) ? student.assignedQuestionIds.length : 0}</dd></div>
+    </dl>
+  `;
+
+  $('#wrongList').innerHTML = wrongRows.length
+    ? wrongRows.map(item => `
       <div class="list-item">
         <div>
-          <strong>${item.classNum} ${escapeHtml(item.name)} · ${escapeHtml(item.english)}</strong><br>
-          <small>正確：${escapeHtml(item.correctZh)}；最近錯選：${escapeHtml(item.lastChosen || '-')}</small>
+          <strong>${escapeHtml(item.english)}</strong><br>
+          <small>正確：${escapeHtml(item.correctZh)}；最近錯選：${escapeHtml(item.lastChosen || '-')}；${formatTime(item.lastTs)}</small>
         </div>
         <strong>${item.count} 次</strong>
       </div>
     `).join('')
-    : '<p>目前沒有錯題。</p>';
+    : '<p>這位學生目前沒有錯題。</p>';
+
+  $('#answerRows').innerHTML = answers.length
+    ? answers.map(row => `
+      <tr class="${row.correct ? 'answer-correct' : 'answer-wrong'}">
+        <td>${formatTime(row.ts)}</td>
+        <td>${escapeHtml(row.territoryName)}</td>
+        <td>${escapeHtml(row.levelName || '')}</td>
+        <td>${escapeHtml(row.english)}</td>
+        <td>${escapeHtml(row.chosenZh)}</td>
+        <td><span class="result-pill ${row.correct ? 'correct' : 'wrong'}">${row.correct ? '對' : '錯'}</span></td>
+      </tr>
+    `).join('')
+    : '<tr><td colspan="6">這位學生目前沒有答題紀錄。</td></tr>';
+}
+
+function answerRowsForStudent(studentId) {
+  return (data.answerLog || [])
+    .filter(row => row.studentId === studentId)
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+}
+
+function wrongRowsForStudent(student) {
+  return Object.values(student?.wrongLog || {})
+    .sort((a, b) => (b.count || 0) - (a.count || 0) || (b.lastTs || 0) - (a.lastTs || 0));
+}
+
+function selectRecordStudent(studentId, scrollToRecords = false) {
+  if (!data?.students?.[studentId]) return;
+  selectedRecordStudentId = studentId;
+  renderStudentRecords();
+  if (scrollToRecords) {
+    $('#learningRecordsSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 function renderRecordings() {
@@ -512,22 +608,6 @@ function renderRecordings() {
   document.querySelectorAll('[data-audio]').forEach(button => {
     button.addEventListener('click', () => new Audio(button.dataset.audio).play());
   });
-}
-
-function renderAnswerLog() {
-  const rows = (data.answerLog || []).slice(0, 120);
-  $('#answerRows').innerHTML = rows.map(row => `
-    <tr>
-      <td>${formatTime(row.ts)}</td>
-      <td>${row.classNum}</td>
-      <td>${escapeHtml(row.studentName)}</td>
-      <td>${escapeHtml(row.territoryName)}</td>
-      <td>${escapeHtml(row.levelName || '')}</td>
-      <td>${escapeHtml(row.english)}</td>
-      <td>${escapeHtml(row.chosenZh)}</td>
-      <td>${row.correct ? '對' : '錯'}</td>
-    </tr>
-  `).join('');
 }
 
 function resetQuestionForm() {
