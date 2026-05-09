@@ -887,22 +887,31 @@ h1 {
   gap: 10px;
 }
 
-.card-grid {
+.card-shop-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
+}
+
+.card-shop-tile {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 82px;
+  overflow: hidden;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fffbeb, #fef3c7);
+  box-shadow: inset 0 -2px 0 rgba(146, 64, 14, 0.08);
 }
 
 .card-button {
   position: relative;
-  min-height: 52px;
-  border: 1px solid #fcd34d;
-  border-radius: 8px;
-  background: linear-gradient(180deg, #fffbeb, #fef3c7);
+  min-height: 48px;
+  border: 0;
+  background: transparent;
   color: #92400e;
   font-weight: 900;
   cursor: pointer;
-  box-shadow: inset 0 -2px 0 rgba(146, 64, 14, 0.08);
 }
 
 .card-button b {
@@ -926,17 +935,12 @@ h1 {
   font-size: 12px;
 }
 
-.shop-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
-  gap: 8px;
-}
-
 .shop-button {
-  min-height: 54px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: linear-gradient(180deg, #fff7ed, #ffedd5);
+  min-height: 30px;
+  border: 0;
+  border-top: 1px solid rgba(251, 191, 36, 0.72);
+  border-radius: 0;
+  background: rgba(255, 237, 213, 0.82);
   color: #9a3412;
   font-weight: 900;
   cursor: pointer;
@@ -945,6 +949,27 @@ h1 {
 .shop-button small {
   color: #c2410c;
   font-size: 11px;
+}
+
+.pack-tile {
+  min-height: 82px;
+  align-content: stretch;
+  border-color: var(--line);
+  background: linear-gradient(180deg, #f8fafc, #e2e8f0);
+  text-align: center;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.pack-tile > span {
+  display: grid;
+  place-items: center;
+}
+
+.pack-tile .shop-button {
+  border-color: rgba(148, 163, 184, 0.5);
+  background: #f1f5f9;
+  color: var(--ink);
 }
 
 .raid-row {

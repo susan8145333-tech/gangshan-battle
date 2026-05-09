@@ -1165,7 +1165,7 @@ function neutralizeTerritory(terr) {
 }
 
 function itemCost(student, item) {
-  const base = { repair: 5, shield: 6, boost: 8, steal: 7, freeze: 6, rent: 9, pack: 6, raid: 10 };
+  const base = { repair: 5, shield: 6, boost: 8, steal: 7, freeze: 6, rent: 9, flag: 12, pack: 6, raid: 10 };
   let cost = base[item];
   if (!cost) return 0;
   if (normalizeRole(student.role) === 'merchant') cost = Math.max(1, cost - 1);
@@ -1179,7 +1179,7 @@ function useShopItem(student, item, targetStudentId, territoryName) {
   if (!cost) return { ok: false, error: '找不到這個道具。' };
   if ((student.coins || 0) < cost) return { ok: false, error: '金幣不夠。' };
 
-  if (['boost', 'repair', 'shield', 'steal', 'freeze', 'rent'].includes(item)) {
+  if (['boost', 'repair', 'shield', 'steal', 'freeze', 'rent', 'flag'].includes(item)) {
     student.coins -= cost;
     addCard(student, item);
     pushEvent(`${student.classNum} ${student.name} 買了 1 張${cardName(item)}。`, 'shop');

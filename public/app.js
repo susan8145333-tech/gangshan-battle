@@ -728,7 +728,7 @@ function renderShop() {
 }
 
 function itemCost(item) {
-  const base = { repair: 5, shield: 6, boost: 8, steal: 7, freeze: 6, rent: 9, pack: 6, raid: 10 };
+  const base = { repair: 5, shield: 6, boost: 8, steal: 7, freeze: 6, rent: 9, flag: 12, pack: 6, raid: 10 };
   let cost = base[item] || 0;
   if (state.student?.role === 'merchant') cost = Math.max(1, cost - 1);
   if (item === 'raid' && state.data?.territories?.['籃球場']?.ownerClass === state.student?.classNum) cost = Math.max(1, cost - 2);
