@@ -1649,30 +1649,43 @@ h1 {
   align-items: center;
 }
 
-.selected-chips {
-  display: flex;
-  flex-wrap: wrap;
+.assign-student-list {
+  max-height: 420px;
+  overflow: auto;
+  display: grid;
   gap: 7px;
-  min-height: 36px;
+  padding-right: 2px;
 }
 
-.student-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  border: 1px solid #bfdbfe;
-  border-radius: 999px;
-  padding: 0 10px;
+.assign-student-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.assign-student-item.selected {
+  border-color: #93c5fd;
   background: #eff6ff;
-  color: #1d4ed8;
-  font-size: 12px;
-  font-weight: 900;
 }
 
-.student-chip.active {
-  border-color: #2563eb;
-  background: #dbeafe;
-  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.18);
+.assign-student-item input {
+  margin-top: 4px;
+}
+
+.assign-student-item strong,
+.assign-student-item small {
+  display: block;
+}
+
+.assign-student-item small {
+  margin-top: 3px;
+  color: var(--muted);
 }
 
 .assign-question-list {

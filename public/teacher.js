@@ -159,18 +159,30 @@ function pruneSelections() {
 }
 
 function renderDifferentiationPanel() {
-  const selectedStudents = [...selectedStudentIds]
-    .map(id => data.students[id])
-    .filter(Boolean)
+  const students = Object.values(data.students || {})
     .sort((a, b) => a.classNum.localeCompare(b.classNum) || a.name.localeCompare(b.name));
-  $('#selectedStudentCount').textContent = `已選 ${selectedStudents.length} 人`;
-  $('#selectedStudentChips').innerHTML = selectedStudents.length
-    ? selectedStudents.map(student => `
-      <span class="student-chip ${selectedStudents.length === 1 ? 'active' : ''}">
-        ${student.classNum} ${escapeHtml(student.name)}
-      </span>
+  $('#selectedStudentCount').textContent = `已選 ${selectedStudentIds.size} 人`;
+  $('#assignStudentList').innerHTML = students.length
+    ? students.map(student => `
+      <label class="assign-student-item ${selectedStudentIds.has(student.id) ? 'selected' : ''}">
+        <input type="checkbox" value="${escapeHtml(student.id)}" ${selectedStudentIds.has(student.id) ? 'checked' : ''}>
+        <span>
+          <strong>${student.classNum} ${escapeHtml(student.name)}</strong>
+          <small>${escapeHtml(getLevelInfo(student).currentLevelName)} · 指定題 ${Array.isArray(student.assignedQuestionIds) ? student.assignedQuestionIds.length : 0}</small>
+        </span>
+      </label>
     `).join('')
-    : '<span class="empty-cards">可在學生總覽勾選，或用上方按鈕快速選班級。</span>';
+    : '<span class="empty-cards">學生登入後會出現在這裡。</span>';
+
+  $('#assignStudentList').querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.addEventListener('change', () => {
+      if (input.checked) selectedStudentIds.add(input.value);
+      else selectedStudentIds.delete(input.value);
+      assignStatusMessage = `已選 ${selectedStudentIds.size} 人，可一起套用關卡或題目。`;
+      renderStudents();
+      renderDifferentiationPanel();
+    });
+  });
 
   renderAssignQuestionList();
 }
