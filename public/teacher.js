@@ -26,6 +26,10 @@ const CLASS_COLORS = {
 
 let data = null;
 let restoreOffered = false;
+let selectedStudentIds = new Set();
+let selectedLevelFilter = 'all';
+let selectedQuestionLevel = 'classroom';
+let selectedQuestionIds = new Set();
 
 const $ = selector => document.querySelector(selector);
 const BACKUP_KEY = 'gangshan-battle-teacher-backup-v1';
@@ -137,11 +141,75 @@ function render() {
   if (!data) return;
   renderMap();
   renderStats();
+  pruneSelections();
+  renderDifferentiationPanel();
   renderStudents();
   renderQuestions();
   renderWrongList();
   renderRecordings();
   renderAnswerLog();
+}
+
+function pruneSelections() {
+  const validStudents = new Set(Object.keys(data.students || {}));
+  selectedStudentIds = new Set([...selectedStudentIds].filter(id => validStudents.has(id)));
+  const validQuestions = new Set((data.questions || []).map(q => q.id));
+  selectedQuestionIds = new Set([...selectedQuestionIds].filter(id => validQuestions.has(id)));
+}
+
+function renderDifferentiationPanel() {
+  const selectedStudents = [...selectedStudentIds]
+    .map(id => data.students[id])
+    .filter(Boolean)
+    .sort((a, b) => a.classNum.localeCompare(b.classNum) || a.name.localeCompare(b.name));
+  $('#selectedStudentCount').textContent = `已選 ${selectedStudents.length} 人`;
+  $('#selectedStudentChips').innerHTML = selectedStudents.length
+    ? selectedStudents.map(student => `
+      <button class="student-chip" type="button" data-remove-student="${escapeHtml(student.id)}">
+        ${student.classNum} ${escapeHtml(student.name)}
+      </button>
+    `).join('')
+    : '<span class="empty-cards">可在學生總覽勾選，或用上方按鈕快速選班級。</span>';
+
+  document.querySelectorAll('[data-remove-student]').forEach(button => {
+    button.addEventListener('click', () => {
+      selectedStudentIds.delete(button.dataset.removeStudent);
+      render();
+    });
+  });
+
+  renderAssignQuestionList();
+}
+
+function renderAssignQuestionList() {
+  const level = selectedQuestionLevel;
+  const questions = (data.questions || [])
+    .filter(question => level === 'all' || question.level === level)
+    .sort((a, b) => (a.level || '').localeCompare(b.level || '') || a.en.localeCompare(b.en));
+  $('#assignQuestionList').innerHTML = questions.length
+    ? questions.map(question => `
+      <label class="assign-question-item">
+        <input type="checkbox" value="${escapeHtml(question.id)}" ${selectedQuestionIds.has(question.id) ? 'checked' : ''}>
+        <span>
+          <strong>${escapeHtml(question.en)}</strong>
+          <small>${escapeHtml(question.zh)} · ${escapeHtml(question.levelName || question.level)}</small>
+        </span>
+      </label>
+    `).join('')
+    : '<p>這個關卡目前沒有題目。</p>';
+
+  $('#assignQuestionList').querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.addEventListener('change', () => {
+      if (input.checked) selectedQuestionIds.add(input.value);
+      else selectedQuestionIds.delete(input.value);
+      updateAssignStatus();
+    });
+  });
+  updateAssignStatus();
+}
+
+function updateAssignStatus(text = '') {
+  $('#assignStatus').textContent = text || `已勾 ${selectedQuestionIds.size} 題。`;
 }
 
 function renderMap() {
@@ -250,8 +318,12 @@ function renderStudents() {
     const total = (student.correct || 0) + (student.wrong || 0);
     const rate = total ? `${Math.round((student.correct || 0) / total * 100)}%` : '-';
     const level = getLevelInfo(student);
+    const assignedCount = Array.isArray(student.assignedQuestionIds) ? student.assignedQuestionIds.length : 0;
     return `
       <tr>
+        <td>
+          <input type="checkbox" data-student-select="${escapeHtml(student.id)}" ${selectedStudentIds.has(student.id) ? 'checked' : ''} aria-label="選取 ${escapeHtml(student.name)}">
+        </td>
         <td>${student.classNum}</td>
         <td>${escapeHtml(student.name)}</td>
         <td>${escapeHtml(roleName(student.role))}</td>
@@ -261,6 +333,7 @@ function renderStudents() {
         <td>${student.wrong || 0}</td>
         <td>${rate}</td>
         <td>${escapeHtml(level.currentLevelName)}</td>
+        <td>${assignedCount ? `${assignedCount} 題` : '-'}</td>
         <td>${attackPower(student)}</td>
         <td>${student.bestStreak || 0}</td>
         <td>${student.recordingCount || 0}</td>
@@ -280,6 +353,13 @@ function renderStudents() {
 
   document.querySelectorAll('[data-student-level]').forEach(button => {
     button.addEventListener('click', () => setStudentLevel(button.dataset.studentLevel, button.dataset.nextLevel));
+  });
+  document.querySelectorAll('[data-student-select]').forEach(input => {
+    input.addEventListener('change', () => {
+      if (input.checked) selectedStudentIds.add(input.dataset.studentSelect);
+      else selectedStudentIds.delete(input.dataset.studentSelect);
+      renderDifferentiationPanel();
+    });
   });
 }
 
@@ -308,7 +388,13 @@ function getLevelInfo(student) {
   const classroom = summary('classroom');
   const festival = summary('festival');
   const phonics = summary('phonics');
-  const manualLevel = ['festival', 'phonics', 'final'].includes(student.manualLevel) ? student.manualLevel : '';
+  const manualLevel = ['classroom', 'festival', 'phonics', 'final'].includes(student.manualLevel) ? student.manualLevel : '';
+  if (manualLevel) {
+    return {
+      currentLevel: manualLevel,
+      currentLevelName: `${levelTitle(manualLevel)}（老師開啟）`,
+    };
+  }
   const festivalUnlocked = manualLevel === 'festival'
     || manualLevel === 'phonics'
     || manualLevel === 'final'
@@ -507,6 +593,61 @@ async function setStudentLevel(studentId, level) {
   render();
 }
 
+async function applyBatchLevel() {
+  const studentIds = [...selectedStudentIds];
+  if (!studentIds.length) {
+    updateAssignStatus('請先選擇學生。');
+    return;
+  }
+  const level = $('#batchLevelSelect').value;
+  const res = await fetch('/api/teacher/students/batch-level', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ studentIds, level }),
+  });
+  const payload = await res.json();
+  if (!res.ok) {
+    updateAssignStatus(payload.error || '關卡設定失敗。');
+    return;
+  }
+  data = payload.state;
+  render();
+  updateAssignStatus(`已套用關卡給 ${payload.count} 位學生。`);
+}
+
+async function applyAssignedQuestions(clear = false) {
+  const studentIds = [...selectedStudentIds];
+  if (!studentIds.length) {
+    updateAssignStatus('請先選擇學生。');
+    return;
+  }
+  const questionIds = clear ? [] : [...selectedQuestionIds];
+  if (!clear && !questionIds.length) {
+    updateAssignStatus('請先勾選要指派的題目。');
+    return;
+  }
+  const res = await fetch('/api/teacher/students/assign-questions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ studentIds, questionIds }),
+  });
+  const payload = await res.json();
+  if (!res.ok) {
+    updateAssignStatus(payload.error || '題目指派失敗。');
+    return;
+  }
+  data = payload.state;
+  render();
+  updateAssignStatus(clear ? `已清除 ${payload.count} 位學生的指定題。` : `已指派 ${payload.questionCount} 題給 ${payload.count} 位學生。`);
+}
+
+function selectStudentsByClass(classNum) {
+  Object.values(data.students || {})
+    .filter(student => !classNum || student.classNum === classNum)
+    .forEach(student => selectedStudentIds.add(student.id));
+  render();
+}
+
 function svgEl(name, attrs, text = '') {
   const el = document.createElementNS('http://www.w3.org/2000/svg', name);
   Object.entries(attrs).forEach(([key, value]) => el.setAttribute(key, value));
@@ -598,6 +739,32 @@ $('#resetAllButton').addEventListener('click', () => {
 
 $('#questionForm').addEventListener('submit', saveQuestion);
 $('#cancelEditButton').addEventListener('click', resetQuestionForm);
+
+$('#select502Button').addEventListener('click', () => selectStudentsByClass('502'));
+$('#select503Button').addEventListener('click', () => selectStudentsByClass('503'));
+$('#selectAllStudentsButton').addEventListener('click', () => selectStudentsByClass(''));
+$('#clearStudentsButton').addEventListener('click', () => {
+  selectedStudentIds.clear();
+  render();
+});
+$('#applyBatchLevelButton').addEventListener('click', applyBatchLevel);
+$('#assignQuestionLevelSelect').addEventListener('change', event => {
+  selectedQuestionLevel = event.target.value;
+  renderAssignQuestionList();
+});
+$('#selectVisibleQuestionsButton').addEventListener('click', () => {
+  $('#assignQuestionList').querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.checked = true;
+    selectedQuestionIds.add(input.value);
+  });
+  updateAssignStatus();
+});
+$('#clearQuestionsButton').addEventListener('click', () => {
+  selectedQuestionIds.clear();
+  renderAssignQuestionList();
+});
+$('#applyAssignedQuestionsButton').addEventListener('click', () => applyAssignedQuestions(false));
+$('#clearAssignedQuestionsButton').addEventListener('click', () => applyAssignedQuestions(true));
 
 loadState();
 connectSocket();

@@ -128,6 +128,22 @@ function shuffle(items) {
 }
 
 function pickQuestion() {
+  const assignedIds = Array.isArray(state.student?.assignedQuestionIds) ? state.student.assignedQuestionIds : [];
+  if (!state.trialLevel && assignedIds.length) {
+    const assigned = assignedIds
+      .map(id => state.questions.find(q => q.id === id))
+      .filter(Boolean);
+    if (assigned.length) {
+      const stats = state.student.questionStats || {};
+      const unfinished = assigned.filter(q => (stats[q.id]?.attempts || 0) === 0);
+      const pool = unfinished.length ? unfinished : assigned;
+      const q = pool[Math.floor(Math.random() * pool.length)];
+      state.currentQuestion = q;
+      state.questionNumber += 1;
+      return q;
+    }
+  }
+
   const level = state.trialLevel || myLevelInfo()?.currentLevel || 'classroom';
   const pool = state.questions.filter(q => q.level === level);
   const q = (pool.length ? pool : state.questions)[Math.floor(Math.random() * (pool.length ? pool.length : state.questions.length))];
@@ -312,27 +328,6 @@ function getLevelInfo(student) {
   const classroom = summary('classroom');
   const festival = summary('festival');
   const phonics = summary('phonics');
-  const manualLevel = ['festival', 'phonics', 'final'].includes(student.manualLevel) ? student.manualLevel : '';
-  const festivalUnlocked = manualLevel === 'festival'
-    || manualLevel === 'phonics'
-    || manualLevel === 'final'
-    || (classroom.total > 0 && classroom.answered >= classroom.total && classroom.accuracy >= 0.9);
-  const phonicsUnlocked = manualLevel === 'phonics'
-    || manualLevel === 'final'
-    || (festivalUnlocked && festival.total > 0 && festival.answered >= festival.total && festival.accuracy >= 0.9);
-  const finalUnlocked = manualLevel === 'final'
-    || (phonicsUnlocked && phonics.total > 0 && phonics.answered >= phonics.total && phonics.accuracy >= 0.9);
-  const currentLevel = finalUnlocked ? 'final' : phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
-  if (manualLevel) {
-    return {
-      currentLevel,
-      currentLevelName: `${levelTitle(currentLevel)}（老師開啟）`,
-      classroom,
-      festival,
-      phonics,
-      manualMode: true,
-    };
-  }
   if (state.trialLevel) {
     return {
       currentLevel: state.trialLevel,
@@ -343,6 +338,27 @@ function getLevelInfo(student) {
       trialMode: true,
     };
   }
+  const manualLevel = ['classroom', 'festival', 'phonics', 'final'].includes(student.manualLevel) ? student.manualLevel : '';
+  if (manualLevel) {
+    return {
+      currentLevel: manualLevel,
+      currentLevelName: `${levelTitle(manualLevel)}（老師開啟）`,
+      classroom,
+      festival,
+      phonics,
+      manualMode: true,
+    };
+  }
+  const festivalUnlocked = manualLevel === 'festival'
+    || manualLevel === 'phonics'
+    || manualLevel === 'final'
+    || (classroom.total > 0 && classroom.answered >= classroom.total && classroom.accuracy >= 0.9);
+  const phonicsUnlocked = manualLevel === 'phonics'
+    || manualLevel === 'final'
+    || (festivalUnlocked && festival.total > 0 && festival.answered >= festival.total && festival.accuracy >= 0.9);
+  const finalUnlocked = manualLevel === 'final'
+    || (phonicsUnlocked && phonics.total > 0 && phonics.answered >= phonics.total && phonics.accuracy >= 0.9);
+  const currentLevel = finalUnlocked ? 'final' : phonicsUnlocked ? 'phonics' : festivalUnlocked ? 'festival' : 'classroom';
   return {
     currentLevel,
     currentLevelName: levelTitle(currentLevel),
@@ -381,6 +397,13 @@ function lineBonusTotals(classNum) {
 function renderLevel() {
   const info = myLevelInfo();
   if (!info || !$('#levelBadge')) return;
+  const assignedIds = Array.isArray(state.student?.assignedQuestionIds) ? state.student.assignedQuestionIds : [];
+  if (!state.trialLevel && assignedIds.length) {
+    const stats = state.student.questionStats || {};
+    const done = assignedIds.filter(id => (stats[id]?.attempts || 0) > 0).length;
+    $('#levelBadge').textContent = `老師指定題組 · ${done}/${assignedIds.length}`;
+    return;
+  }
   const c = info.classroom;
   const pct = Math.round((c.accuracy || 0) * 100);
   const levelBonus = info.currentLevel === 'final' ? 3 : info.currentLevel === 'phonics' ? 2 : info.currentLevel === 'festival' ? 1 : 0;

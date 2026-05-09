@@ -108,11 +108,66 @@
     </section>
 
     <section class="teacher-card wide">
+      <div class="section-heading">
+        <h2>差異化指派</h2>
+        <span id="selectedStudentCount">已選 0 人</span>
+      </div>
+      <div class="assign-grid">
+        <div class="assign-panel">
+          <h3>1. 選學生</h3>
+          <div class="assign-actions">
+            <button id="select502Button" class="mini-button" type="button">選 502</button>
+            <button id="select503Button" class="mini-button" type="button">選 503</button>
+            <button id="selectAllStudentsButton" class="mini-button" type="button">全選</button>
+            <button id="clearStudentsButton" class="mini-button" type="button">清除</button>
+          </div>
+          <div id="selectedStudentChips" class="selected-chips"></div>
+        </div>
+        <div class="assign-panel">
+          <h3>2. 指定關卡</h3>
+          <label>
+            讓選取學生直接開始
+            <select id="batchLevelSelect">
+              <option value="">自動判斷</option>
+              <option value="classroom">第一關 課室英語</option>
+              <option value="festival">第二關 節慶英語</option>
+              <option value="phonics">第三關 Phonics 聽力</option>
+              <option value="final">第四關 學力檢測總挑戰</option>
+            </select>
+          </label>
+          <button id="applyBatchLevelButton" class="primary-button compact-action" type="button">套用關卡</button>
+          <small>可用來讓特定學生重回第一關，或直接進入後面關卡試玩/補救。</small>
+        </div>
+        <div class="assign-panel question-assign-panel">
+          <h3>3. 指定題目</h3>
+          <div class="assign-filter-row">
+            <select id="assignQuestionLevelSelect">
+              <option value="classroom">第一關 課室英語</option>
+              <option value="festival">第二關 節慶英語</option>
+              <option value="phonics">第三關 Phonics 聽力</option>
+              <option value="final">第四關 學力檢測總挑戰</option>
+              <option value="all">全部關卡</option>
+            </select>
+            <button id="selectVisibleQuestionsButton" class="mini-button" type="button">勾本頁題目</button>
+            <button id="clearQuestionsButton" class="mini-button" type="button">清除題目</button>
+          </div>
+          <div id="assignQuestionList" class="assign-question-list"></div>
+          <div class="assign-actions">
+            <button id="applyAssignedQuestionsButton" class="primary-button compact-action" type="button">指派題目</button>
+            <button id="clearAssignedQuestionsButton" class="soft-button compact-action" type="button">清除學生指定題</button>
+          </div>
+          <div id="assignStatus" class="teacher-status"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="teacher-card wide">
       <h2>學生總覽</h2>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
+              <th>選</th>
               <th>班級</th>
               <th>英文名字</th>
               <th>角色</th>
@@ -122,6 +177,7 @@
               <th>答錯</th>
               <th>正確率</th>
               <th>關卡</th>
+              <th>指定題</th>
               <th>攻擊力</th>
               <th>最佳連勝</th>
               <th>錄音</th>

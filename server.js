@@ -648,6 +648,9 @@ function normalizeLoadedData(data) {
     s.cards = normalizeCards(s.cards);
     s.questionStats = s.questionStats || {};
     s.manualLevel = LEVELS.some(level => level.id === s.manualLevel) ? s.manualLevel : '';
+    s.assignedQuestionIds = Array.isArray(s.assignedQuestionIds)
+      ? s.assignedQuestionIds.filter(id => allQuestions().some(q => q.id === id))
+      : [];
     s.role = normalizeRole(s.role);
     s.color = s.color || STUDENT_COLORS[(data.colorIndex++) % STUDENT_COLORS.length];
   });
@@ -895,6 +898,18 @@ function studentLevelInfo(student) {
   const phonics = levelSummary(student, 'phonics');
   const final = levelSummary(student, 'final');
   const manualLevel = LEVELS.some(level => level.id === student.manualLevel) ? student.manualLevel : '';
+  if (manualLevel) {
+    return {
+      currentLevel: manualLevel,
+      currentLevelName: `${levelName(manualLevel)}（老師開啟）`,
+      unlockedLevels: LEVELS.map(level => level.id),
+      classroom,
+      festival,
+      phonics,
+      final,
+      manualLevel,
+    };
+  }
   const manualFestival = manualLevel === 'festival';
   const manualPhonics = manualLevel === 'phonics';
   const manualFinal = manualLevel === 'final';
@@ -1592,17 +1607,53 @@ app.post('/api/teacher/students/:id/level', (req, res) => {
   const student = gameData.students[req.params.id];
   if (!student) return res.status(404).json({ error: '找不到學生。' });
   const level = String(req.body.level || '');
-  student.manualLevel = ['festival', 'phonics', 'final'].includes(level) ? level : '';
-  const openedLevelText = student.manualLevel === 'final' ? '第四關' : student.manualLevel === 'phonics' ? '第三關' : '第二關';
+  student.manualLevel = LEVELS.some(item => item.id === level) ? level : '';
   pushEvent(
     student.manualLevel
-      ? `老師開啟 ${student.name} 的${openedLevelText}。`
+      ? `老師開啟 ${student.name} 的${levelName(student.manualLevel)}。`
       : `老師將 ${student.name} 改回自動關卡。`,
     'teacher'
   );
   save();
   broadcast();
   res.json({ ok: true, student, state: publicState() });
+});
+
+app.post('/api/teacher/students/batch-level', (req, res) => {
+  const ids = Array.isArray(req.body.studentIds) ? req.body.studentIds : [];
+  const level = String(req.body.level || '');
+  const manualLevel = LEVELS.some(item => item.id === level) ? level : '';
+  const students = ids.map(id => gameData.students[id]).filter(Boolean);
+  if (!students.length) return res.status(400).json({ error: '請先選擇學生。' });
+  students.forEach(student => {
+    student.manualLevel = manualLevel;
+  });
+  pushEvent(`老師批次設定 ${students.length} 位學生為：${manualLevel ? levelName(manualLevel) : '自動關卡'}。`, 'teacher');
+  save();
+  broadcast();
+  res.json({ ok: true, count: students.length, state: publicState() });
+});
+
+app.post('/api/teacher/students/assign-questions', (req, res) => {
+  const ids = Array.isArray(req.body.studentIds) ? req.body.studentIds : [];
+  const validQuestionIds = new Set(allQuestions().map(q => q.id));
+  const questionIds = Array.isArray(req.body.questionIds)
+    ? Array.from(new Set(req.body.questionIds.map(String).filter(id => validQuestionIds.has(id))))
+    : [];
+  const students = ids.map(id => gameData.students[id]).filter(Boolean);
+  if (!students.length) return res.status(400).json({ error: '請先選擇學生。' });
+  students.forEach(student => {
+    student.assignedQuestionIds = questionIds;
+  });
+  pushEvent(
+    questionIds.length
+      ? `老師指派 ${students.length} 位學生完成 ${questionIds.length} 題。`
+      : `老師清除 ${students.length} 位學生的指定題目。`,
+    'teacher'
+  );
+  save();
+  broadcast();
+  res.json({ ok: true, count: students.length, questionCount: questionIds.length, state: publicState() });
 });
 
 app.post('/api/login', (req, res) => {
@@ -1630,6 +1681,7 @@ app.post('/api/login', (req, res) => {
       cards: normalizeCards(),
       questionStats: {},
       manualLevel: '',
+      assignedQuestionIds: [],
       role,
       wrongLog: {},
       recordingCount: 0,
