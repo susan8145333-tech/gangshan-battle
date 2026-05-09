@@ -30,6 +30,7 @@ let selectedStudentIds = new Set();
 let selectedLevelFilter = 'all';
 let selectedQuestionLevel = 'classroom';
 let selectedQuestionIds = new Set();
+let assignStatusMessage = '';
 
 const $ = selector => document.querySelector(selector);
 const BACKUP_KEY = 'gangshan-battle-teacher-backup-v1';
@@ -165,15 +166,15 @@ function renderDifferentiationPanel() {
   $('#selectedStudentCount').textContent = `已選 ${selectedStudents.length} 人`;
   $('#selectedStudentChips').innerHTML = selectedStudents.length
     ? selectedStudents.map(student => `
-      <button class="student-chip" type="button" data-remove-student="${escapeHtml(student.id)}">
+      <button class="student-chip ${selectedStudents.length === 1 ? 'active' : ''}" type="button" data-focus-student="${escapeHtml(student.id)}">
         ${student.classNum} ${escapeHtml(student.name)}
       </button>
     `).join('')
-    : '<span class="empty-cards">可在學生總覽勾選，或用上方按鈕快速選班級。</span>';
+    : '<span class="empty-cards">可在學生總覽勾選，或用上方按鈕快速選班級。點學生名字可查看他的指定題。</span>';
 
-  document.querySelectorAll('[data-remove-student]').forEach(button => {
+  document.querySelectorAll('[data-focus-student]').forEach(button => {
     button.addEventListener('click', () => {
-      selectedStudentIds.delete(button.dataset.removeStudent);
+      focusStudent(button.dataset.focusStudent);
       render();
     });
   });
@@ -205,11 +206,27 @@ function renderAssignQuestionList() {
       updateAssignStatus();
     });
   });
-  updateAssignStatus();
+  updateAssignStatus(assignStatusMessage);
 }
 
 function updateAssignStatus(text = '') {
+  assignStatusMessage = text;
   $('#assignStatus').textContent = text || `已勾 ${selectedQuestionIds.size} 題。`;
+}
+
+function loadStudentAssignment(studentId) {
+  const student = data?.students?.[studentId];
+  if (!student) return;
+  selectedQuestionIds = new Set(Array.isArray(student.assignedQuestionIds) ? student.assignedQuestionIds : []);
+  const levelSelect = $('#batchLevelSelect');
+  if (levelSelect) levelSelect.value = student.manualLevel || '';
+  assignStatusMessage = `${student.classNum} ${student.name} 目前指定 ${selectedQuestionIds.size} 題。`;
+}
+
+function focusStudent(studentId) {
+  if (!data?.students?.[studentId]) return;
+  selectedStudentIds = new Set([studentId]);
+  loadStudentAssignment(studentId);
 }
 
 function renderMap() {
@@ -325,7 +342,7 @@ function renderStudents() {
           <input type="checkbox" data-student-select="${escapeHtml(student.id)}" ${selectedStudentIds.has(student.id) ? 'checked' : ''} aria-label="選取 ${escapeHtml(student.name)}">
         </td>
         <td>${student.classNum}</td>
-        <td>${escapeHtml(student.name)}</td>
+        <td><button class="student-name-button" type="button" data-focus-student="${escapeHtml(student.id)}">${escapeHtml(student.name)}</button></td>
         <td>${escapeHtml(roleName(student.role))}</td>
         <td>${student.score || 0}</td>
         <td>${student.coins || 0}</td>
@@ -354,11 +371,20 @@ function renderStudents() {
   document.querySelectorAll('[data-student-level]').forEach(button => {
     button.addEventListener('click', () => setStudentLevel(button.dataset.studentLevel, button.dataset.nextLevel));
   });
-  document.querySelectorAll('[data-student-select]').forEach(input => {
+  $('#studentRows').querySelectorAll('[data-student-select]').forEach(input => {
     input.addEventListener('change', () => {
       if (input.checked) selectedStudentIds.add(input.dataset.studentSelect);
       else selectedStudentIds.delete(input.dataset.studentSelect);
+      if (selectedStudentIds.size === 1) loadStudentAssignment([...selectedStudentIds][0]);
+      if (selectedStudentIds.size !== 1) assignStatusMessage = `已選 ${selectedStudentIds.size} 人，可批次套用關卡或題目。`;
+      renderStudents();
       renderDifferentiationPanel();
+    });
+  });
+  $('#studentRows').querySelectorAll('[data-focus-student]').forEach(button => {
+    button.addEventListener('click', () => {
+      focusStudent(button.dataset.focusStudent);
+      render();
     });
   });
 }
@@ -645,6 +671,8 @@ function selectStudentsByClass(classNum) {
   Object.values(data.students || {})
     .filter(student => !classNum || student.classNum === classNum)
     .forEach(student => selectedStudentIds.add(student.id));
+  if (selectedStudentIds.size === 1) loadStudentAssignment([...selectedStudentIds][0]);
+  if (selectedStudentIds.size !== 1) assignStatusMessage = `已選 ${selectedStudentIds.size} 人，可批次套用關卡或題目。`;
   render();
 }
 
@@ -745,6 +773,7 @@ $('#select503Button').addEventListener('click', () => selectStudentsByClass('503
 $('#selectAllStudentsButton').addEventListener('click', () => selectStudentsByClass(''));
 $('#clearStudentsButton').addEventListener('click', () => {
   selectedStudentIds.clear();
+  assignStatusMessage = '已清除學生選取。';
   render();
 });
 $('#applyBatchLevelButton').addEventListener('click', applyBatchLevel);
