@@ -1418,7 +1418,9 @@ h1 {
 }
 
 .display-body {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   overflow: hidden;
   background:
     radial-gradient(circle at 18% 20%, rgba(37, 99, 235, 0.16), transparent 32%),
@@ -1428,10 +1430,13 @@ h1 {
 
 .display-layout {
   height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   display: grid;
-  grid-template-rows: auto auto 1fr;
-  gap: 12px;
-  padding: 16px;
+  grid-template-rows: 74px 88px minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px 12px;
+  overflow: hidden;
 }
 
 .display-header,
@@ -1444,7 +1449,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: 10px 14px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
@@ -1452,23 +1457,24 @@ h1 {
 
 .display-header h1 {
   margin: 0;
-  font-size: 36px;
+  font-size: 30px;
 }
 
 .display-clock {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 900;
 }
 
 .display-scoreboard {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
+  min-height: 0;
 }
 
 .display-class {
-  min-height: 108px;
-  padding: 18px 22px;
+  min-height: 0;
+  padding: 12px 18px;
   border-radius: 8px;
   color: #fff;
   display: grid;
@@ -1479,24 +1485,24 @@ h1 {
 
 .display-class span {
   grid-row: span 2;
-  font-size: 54px;
+  font-size: 46px;
   font-weight: 900;
 }
 
 .display-class strong {
-  font-size: 34px;
+  font-size: 30px;
 }
 
 .display-class small {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
   opacity: 0.92;
 }
 
 .display-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 390px;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(330px, 360px);
+  gap: 10px;
   min-height: 0;
 }
 
@@ -1548,14 +1554,15 @@ h1 {
 
 .display-side {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 150px 128px;
-  gap: 10px;
+  grid-template-rows: minmax(0, 1fr) 128px 92px;
+  gap: 8px;
   min-height: 0;
 }
 
 .display-card {
   min-height: 0;
-  padding: 12px;
+  overflow: hidden;
+  padding: 10px;
   border: 1px solid rgba(219, 227, 239, 0.92);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.94);
@@ -1571,8 +1578,8 @@ h1 {
 }
 
 .display-card h2 {
-  margin-bottom: 10px;
-  font-size: 20px;
+  margin-bottom: 8px;
+  font-size: 18px;
 }
 
 .display-card-heading h2 {
@@ -1603,8 +1610,8 @@ h1 {
   grid-template-columns: 42px minmax(0, 1fr) auto;
   gap: 1px 8px;
   align-items: center;
-  min-height: 40px;
-  padding: 5px 8px;
+  min-height: 42px;
+  padding: 6px 8px;
   border: 1px solid #dbe3ef;
   border-radius: 8px;
   background: linear-gradient(90deg, #ffffff, #f8fafc);
@@ -1648,10 +1655,6 @@ h1 {
   white-space: nowrap;
 }
 
-.display-rank-meta {
-  grid-column: 2 / -1;
-}
-
 .display-rank-row.rank-1 {
   border-color: #facc15;
   background: linear-gradient(90deg, #fef3c7, #ffffff);
@@ -1685,19 +1688,72 @@ h1 {
 
 .display-events {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   max-height: 100%;
   overflow: hidden;
 }
 
 .display-event {
-  padding: 9px 11px;
+  padding: 7px 9px;
   border-radius: 8px;
   background: #eef2ff;
   color: #312e81;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.25;
+}
+
+.display-side .power-list {
+  max-height: 48px;
+  overflow: hidden;
+  gap: 4px;
+}
+
+.display-side .power-row {
+  grid-template-columns: auto 1fr;
+  gap: 1px 6px;
+  padding: 4px 7px;
+}
+
+.display-side .power-row strong {
+  font-size: 13px;
+}
+
+.display-side .power-row span,
+.display-side .power-row small {
+  font-size: 10px;
+  line-height: 1.15;
+}
+
+@media (max-width: 980px) {
+  .display-body {
+    overflow: auto;
+  }
+
+  .display-layout {
+    height: auto;
+    max-height: none;
+    min-height: 100dvh;
+    grid-template-rows: auto auto auto;
+    overflow: visible;
+  }
+
+  .display-main {
+    grid-template-columns: 1fr;
+  }
+
+  .display-map {
+    aspect-ratio: 1243 / 888;
+    min-height: 340px;
+  }
+
+  .display-side {
+    grid-template-rows: auto auto auto;
+  }
+
+  .display-ranking-list {
+    max-height: 320px;
+  }
 }
 
 .teacher-header {

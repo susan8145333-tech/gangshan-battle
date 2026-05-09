@@ -151,10 +151,9 @@ function renderLeaders() {
         <b>#${row.rank}</b>
         <span>
           <strong>${row.classNum} ${escapeHtml(row.name)}</strong>
-          <small>${escapeHtml(row.levelName || '')}</small>
+          <small>${escapeHtml(row.levelName || '')} · ${row.lands} 地 · ${row.answered} 題 · 攻 ${row.attackPower}</small>
         </span>
         <em>${row.score} 分</em>
-        <small class="display-rank-meta">${row.lands} 地 · ${row.answered} 題 · 攻 ${row.attackPower}</small>
       </div>
     `).join('')
     : '<div class="display-rank-empty">等待學生加入。</div>';
