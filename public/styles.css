@@ -471,12 +471,18 @@ h1 {
 
 .map-zone-card.compact-card {
   gap: 2px;
-  padding: 6px 4px 16px;
-  font-size: clamp(15px, 1.25vw, 22px);
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  padding: 7px 3px 15px;
+  font-size: clamp(14px, 1.18vw, 20px);
 }
 
 .map-zone-card.compact-card span {
   line-height: 1.05;
+}
+
+.map-zone-card.compact-card.mega-card span {
+  font-size: clamp(15px, 1.15vw, 20px);
 }
 
 .map-zone-card.room-card {
@@ -506,9 +512,10 @@ h1 {
 }
 
 .map-zone-card.compact-card small {
-  max-width: 96%;
-  padding: 2px 5px;
-  font-size: clamp(9px, 0.82vw, 12px);
+  max-width: calc(100% - 6px);
+  padding: 2px 4px;
+  font-size: clamp(8px, 0.76vw, 10px);
+  letter-spacing: 0;
 }
 
 .zone-scoreline {
@@ -541,8 +548,8 @@ h1 {
 }
 
 .map-zone-card.compact-card .zone-owner-name {
-  max-width: 96%;
-  font-size: clamp(9px, 0.82vw, 12px);
+  max-width: calc(100% - 6px);
+  font-size: clamp(8px, 0.76vw, 10px);
 }
 
 .map-zone-card.road-card small {
@@ -553,13 +560,19 @@ h1 {
   font-size: clamp(11px, 1vw, 14px);
 }
 
+.map-zone-card.compact-card.mega-card small {
+  font-size: clamp(8px, 0.76vw, 10px);
+}
+
 .map-zone-card .zone-status {
   background: rgba(255, 255, 255, 0.9);
   color: #13233f;
 }
 
 .map-zone-card.compact-card .zone-status {
-  max-width: 96%;
+  max-width: calc(100% - 6px);
+  font-size: clamp(8px, 0.74vw, 10px);
+  font-weight: 900;
 }
 
 .map-zone-card.owner-502 .zone-status,

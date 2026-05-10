@@ -636,10 +636,11 @@ function renderHtmlMapOverlay() {
     const progressMeta = `502 ${share502}% | 503 ${share503}%`;
     const leadClass = share502 === share503 ? '' : share502 > share503 ? '502' : '503';
     const isCompact = zone.w < 130 || zone.h < 120;
+    const compactProgressMeta = `502 ${share502}｜503 ${share503}`;
     const ownerMeta = mapOwnerMeta(territory, isCompact);
     const personalMeta = selected ? selectedTerritoryStatus(territory, isCompact) : '';
     const showOwner = Boolean(ownerMeta);
-    const showProgress = selected || !showOwner;
+    const showProgress = selected || !showOwner || isCompact;
     return `
       <button
         class="map-zone-card ${isRoom ? 'room-card' : ''} ${isRoad ? 'road-card' : ''} ${isMega ? 'mega-card' : ''} ${isCompact ? 'compact-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''} ${isMine ? 'mine' : ''} ${selected ? 'selected' : ''}"
@@ -651,7 +652,7 @@ function renderHtmlMapOverlay() {
         <span>${escapeHtml(name)}</span>
         <div class="zone-scoreline"><b>502 ${share502}%</b><b>503 ${share503}%</b></div>
         ${showOwner ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : leadClass ? `<small class="zone-owner-name">${leadClass} 推進中</small>` : ''}
-        ${showProgress ? `<small class="zone-status">${escapeHtml(personalMeta || progressMeta)}</small>` : ''}
+        ${showProgress ? `<small class="zone-status">${escapeHtml(personalMeta || (isCompact ? compactProgressMeta : progressMeta))}</small>` : ''}
         <div class="zone-battle-bar" aria-hidden="true">
           <i class="bar-502" style="width:${share502}%"></i>
           <i class="bar-503" style="width:${share503}%"></i>
