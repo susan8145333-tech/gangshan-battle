@@ -111,7 +111,7 @@ function renderMapOverlay() {
     const isCompact = zone.w < 130 || zone.h < 120;
     const share502 = territory.maxHp ? Math.round(((territory.progress?.['502'] || 0) / territory.maxHp) * 100) : 0;
     const share503 = territory.maxHp ? Math.round(((territory.progress?.['503'] || 0) / territory.maxHp) * 100) : 0;
-    const compactProgressMeta = `502 ${share502}｜503 ${share503}`;
+    const compactProgressHtml = compactProgressLabel(share502, share503);
     const ownerMeta = ownerClass ? mapOwnerMeta(territory, isCompact) : '';
     return `
       <div
@@ -121,7 +121,7 @@ function renderMapOverlay() {
         <span>${escapeHtml(name)}</span>
         <div class="zone-scoreline"><b>502 ${share502}%</b><b>503 ${share503}%</b></div>
         ${ownerMeta ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : '<small class="zone-owner-name">尚未領先</small>'}
-        ${isCompact ? `<small class="zone-status">${escapeHtml(compactProgressMeta)}</small>` : ''}
+        ${isCompact ? compactProgressHtml : ''}
         <div class="zone-battle-bar" aria-hidden="true">
           <i class="bar-502" style="width:${share502}%"></i>
           <i class="bar-503" style="width:${share503}%"></i>
@@ -129,6 +129,14 @@ function renderMapOverlay() {
       </div>
     `;
   }).join('');
+}
+
+function compactProgressLabel(share502, share503) {
+  return `
+    <small class="zone-status compact-zone-status">
+      <b>502 ${share502}</b>
+      <b>503 ${share503}</b>
+    </small>`;
 }
 
 function mapOwnerMeta(territory, isCompact = false) {

@@ -575,6 +575,24 @@ h1 {
   font-weight: 900;
 }
 
+.map-zone-card .compact-zone-status {
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  padding: 2px 4px;
+  white-space: normal;
+  line-height: 1.05;
+}
+
+.map-zone-card .compact-zone-status b {
+  display: block;
+  color: inherit;
+  font-size: inherit;
+  font-weight: 900;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
 .map-zone-card.owner-502 .zone-status,
 .map-zone-card.owner-503 .zone-status {
   background: rgba(255, 255, 255, 0.96);
