@@ -631,12 +631,13 @@ function renderHtmlMapOverlay() {
     const top = (zone.y / 888) * 100;
     const width = (zone.w / 1243) * 100;
     const height = (zone.h / 888) * 100;
-    const ownerMeta = ownerClass ? `${ownerClass} ${territory.ownerStudentName || '領先'}`.trim() : '';
     const share502 = territory.maxHp ? Math.round(((territory.progress?.['502'] || 0) / territory.maxHp) * 100) : 0;
     const share503 = territory.maxHp ? Math.round(((territory.progress?.['503'] || 0) / territory.maxHp) * 100) : 0;
     const progressMeta = `502 ${share502}% | 503 ${share503}%`;
     const leadClass = share502 === share503 ? '' : share502 > share503 ? '502' : '503';
     const isCompact = zone.w < 130 || zone.h < 120;
+    const ownerMeta = mapOwnerMeta(territory, isCompact);
+    const personalMeta = selected ? selectedTerritoryStatus(territory, isCompact) : '';
     const showOwner = Boolean(ownerMeta);
     const showProgress = selected || !showOwner;
     return `
@@ -650,7 +651,7 @@ function renderHtmlMapOverlay() {
         <span>${escapeHtml(name)}</span>
         <div class="zone-scoreline"><b>502 ${share502}%</b><b>503 ${share503}%</b></div>
         ${showOwner ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : leadClass ? `<small class="zone-owner-name">${leadClass} 推進中</small>` : ''}
-        ${showProgress ? `<small class="zone-status">${escapeHtml(progressMeta)}</small>` : ''}
+        ${showProgress ? `<small class="zone-status">${escapeHtml(personalMeta || progressMeta)}</small>` : ''}
         <div class="zone-battle-bar" aria-hidden="true">
           <i class="bar-502" style="width:${share502}%"></i>
           <i class="bar-503" style="width:${share503}%"></i>
@@ -660,6 +661,37 @@ function renderHtmlMapOverlay() {
   overlay.querySelectorAll('[data-map-zone]').forEach(button => {
     button.addEventListener('click', () => selectTerritory(button.dataset.mapZone));
   });
+}
+
+function mapOwnerMeta(territory, isCompact = false) {
+  if (!territory?.ownerClass) return '';
+  const name = territory.ownerStudentName || '領先';
+  if (!isCompact) return `${territory.ownerClass} ${name}`.trim();
+  const shortName = name === '領先' ? name : name.slice(0, 1).toUpperCase();
+  return `${territory.ownerClass} ${shortName}`.trim();
+}
+
+function contributionPoints(territory, studentId) {
+  return Math.max(0, Number(territory?.contributors?.[studentId] || 0));
+}
+
+function selectedTerritoryStatus(territory, isCompact = false) {
+  const student = state.student;
+  if (!territory || !student) return '';
+  const myPoints = contributionPoints(territory, student.id);
+  const ownerPoints = contributionPoints(territory, territory.ownerStudentId);
+  if (territory.ownerClass === student.classNum && territory.ownerStudentId) {
+    if (territory.ownerStudentId === student.id) {
+      return isCompact ? `你 ${myPoints}` : `你是樓主 ${myPoints} 格`;
+    }
+    if (ownerPoints <= 0 && myPoints <= 0) return '';
+    const need = Math.max(0, ownerPoints - myPoints);
+    return isCompact
+      ? `你${myPoints} 差${need}`
+      : `你 ${myPoints} 格 · 追平樓主差 ${need}`;
+  }
+  const myClassProgress = territory.progress?.[student.classNum] || 0;
+  return isCompact ? `${student.classNum} ${myClassProgress}` : `${student.classNum} 目前 ${myClassProgress} 格`;
 }
 
 function renderProgress(svg, territory, zone) {
@@ -761,7 +793,8 @@ function renderTargetInfo() {
   }
 
   if (territory.ownerClass) {
-    owner.textContent = `目前：${territory.ownerClass} ${territory.ownerStudentName || ''} 領先 · 502 ${p502}/${territory.maxHp} (${share502}%) / 503 ${p503}/${territory.maxHp} (${share503}%)`;
+    const leaderDetail = territoryLeaderDetail(territory);
+    owner.textContent = `目前：${territory.ownerClass} ${territory.ownerStudentName || ''} 樓主${leaderDetail ? ` · ${leaderDetail}` : ''} · 502 ${p502}/${territory.maxHp} (${share502}%) / 503 ${p503}/${territory.maxHp} (${share503}%)`;
     owner.className = `target-owner owner-${territory.ownerClass}`;
   } else {
     owner.textContent = `尚未領先 · 502 ${p502}/${territory.maxHp} · 503 ${p503}/${territory.maxHp}`;
@@ -772,6 +805,24 @@ function renderTargetInfo() {
 
 function targetNeedText(territory, myClass, myProgress, otherProgress) {
   if (!myClass) return '請先登入';
+  const student = state.student;
+  if (student && territory.ownerClass === myClass && territory.ownerStudentId) {
+    const myPoints = contributionPoints(territory, student.id);
+    const ownerPoints = contributionPoints(territory, territory.ownerStudentId);
+    if (ownerPoints <= 0 && myPoints <= 0) return classNeedText(territory, myClass, myProgress, otherProgress);
+    if (territory.ownerStudentId === student.id) {
+      return `你是目前樓主，個人貢獻 ${myPoints} 格`;
+    }
+    const ownerName = territory.ownerStudentName || '樓主';
+    const need = Math.max(0, ownerPoints - myPoints);
+    return need > 0
+      ? `你已貢獻 ${myPoints} 格，追平樓主 ${ownerName} 還差 ${need} 格`
+      : `你已追平樓主 ${ownerName}，下一題有機會成為樓主`;
+  }
+  return classNeedText(territory, myClass, myProgress, otherProgress);
+}
+
+function classNeedText(territory, myClass, myProgress, otherProgress) {
   if (territory.ownerClass === myClass) {
     const lead = Math.max(0, myProgress - otherProgress);
     const danger = Math.max(0, TAKEOVER_MARGIN - lead);
@@ -783,6 +834,17 @@ function targetNeedText(territory, myClass, myProgress, otherProgress) {
     : needToOpen;
   const needed = Math.max(needToOpen, needToOvertake);
   return needed > 0 ? `再推進 ${needed} 格可取得領先` : '下一題答對就可能翻盤';
+}
+
+function territoryLeaderDetail(territory) {
+  const student = state.student;
+  if (!territory?.ownerStudentId || !student || territory.ownerClass !== student.classNum) return '';
+  const ownerPoints = contributionPoints(territory, territory.ownerStudentId);
+  const myPoints = contributionPoints(territory, student.id);
+  if (ownerPoints <= 0 && myPoints <= 0) return '';
+  if (territory.ownerStudentId === student.id) return `你 ${myPoints} 格`;
+  const need = Math.max(0, ownerPoints - myPoints);
+  return `樓主 ${ownerPoints} 格 / 你 ${myPoints} 格 / 差 ${need} 格`;
 }
 
 function otherClass(classNum) {

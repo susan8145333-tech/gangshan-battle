@@ -1183,7 +1183,28 @@ function territoryShare(terr, classNum) {
   return Math.round(((terr.progress?.[classNum] || 0) / terr.maxHp) * 100);
 }
 
-function targetNeedText(terr, classNum) {
+function contributorPoints(terr, studentId) {
+  return Math.max(0, Number(terr.contributors?.[studentId] || 0));
+}
+
+function studentLeaderNeedText(terr, student) {
+  if (!student || terr.ownerClass !== student.classNum || !terr.ownerStudentId) return '';
+  const myPoints = contributorPoints(terr, student.id);
+  const ownerPoints = contributorPoints(terr, terr.ownerStudentId);
+  if (ownerPoints <= 0 && myPoints <= 0) return '';
+  if (terr.ownerStudentId === student.id) {
+    return `你是目前樓主，個人貢獻 ${myPoints} 格。`;
+  }
+  const ownerName = terr.ownerStudentName || '樓主';
+  const need = Math.max(0, ownerPoints - myPoints);
+  return need > 0
+    ? `你在這裡已貢獻 ${myPoints} 格，追平樓主 ${ownerName} 還差 ${need} 格。`
+    : `你已追平樓主 ${ownerName}，下一題有機會成為樓主。`;
+}
+
+function targetNeedText(terr, classNum, student = null) {
+  const studentNeed = studentLeaderNeedText(terr, student);
+  if (studentNeed) return studentNeed;
   const myProgress = terr.progress?.[classNum] || 0;
   const otherProgress = terr.progress?.[otherClass(classNum)] || 0;
   if (terr.ownerClass === classNum) {
@@ -1515,7 +1536,7 @@ function applyCorrectAnswer(student, territoryName) {
     territoryName: terr.name,
     ownerClass: terr.ownerClass,
     ownerStudentName: terr.ownerStudentName,
-    neededText: targetNeedText(terr, student.classNum),
+    neededText: targetNeedText(terr, student.classNum, student),
     type: 'correct',
   };
 }

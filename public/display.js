@@ -111,7 +111,7 @@ function renderMapOverlay() {
     const isCompact = zone.w < 130 || zone.h < 120;
     const share502 = territory.maxHp ? Math.round(((territory.progress?.['502'] || 0) / territory.maxHp) * 100) : 0;
     const share503 = territory.maxHp ? Math.round(((territory.progress?.['503'] || 0) / territory.maxHp) * 100) : 0;
-    const ownerMeta = ownerClass ? `${ownerClass} ${territory.ownerStudentName || '領先'}`.trim() : '';
+    const ownerMeta = ownerClass ? mapOwnerMeta(territory, isCompact) : '';
     return `
       <div
         class="map-zone-card display-zone-card ${isMega ? 'mega-card' : ''} ${isCompact ? 'compact-card' : ''} ${ownerClass ? `owner-${ownerClass}` : ''}"
@@ -127,6 +127,13 @@ function renderMapOverlay() {
       </div>
     `;
   }).join('');
+}
+
+function mapOwnerMeta(territory, isCompact = false) {
+  const name = territory.ownerStudentName || '領先';
+  if (!isCompact) return `${territory.ownerClass} ${name}`.trim();
+  const shortName = name === '領先' ? name : name.slice(0, 1).toUpperCase();
+  return `${territory.ownerClass} ${shortName}`.trim();
 }
 
 function renderPowers() {
