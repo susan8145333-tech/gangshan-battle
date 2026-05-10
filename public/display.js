@@ -120,7 +120,7 @@ function renderMapOverlay() {
       >
         <span>${escapeHtml(name)}</span>
         <div class="zone-scoreline"><b>502 ${share502}%</b><b>503 ${share503}%</b></div>
-        ${ownerMeta ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : '<small class="zone-owner-name">尚未領先</small>'}
+        ${ownerMeta ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : isCompact ? '' : '<small class="zone-owner-name">尚未領先</small>'}
         ${isCompact ? compactProgressHtml : ''}
         <div class="zone-battle-bar" aria-hidden="true">
           <i class="bar-502" style="width:${share502}%"></i>

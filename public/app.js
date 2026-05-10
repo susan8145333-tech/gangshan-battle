@@ -651,7 +651,7 @@ function renderHtmlMapOverlay() {
       >
         <span>${escapeHtml(name)}</span>
         <div class="zone-scoreline"><b>502 ${share502}%</b><b>503 ${share503}%</b></div>
-        ${showOwner ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : leadClass ? `<small class="zone-owner-name">${leadClass} 推進中</small>` : ''}
+        ${showOwner ? `<small class="zone-owner-name">${escapeHtml(ownerMeta)}</small>` : leadClass && !isCompact ? `<small class="zone-owner-name">${leadClass} 推進中</small>` : ''}
         ${showProgress ? (isCompact && !personalMeta ? compactProgressHtml : `<small class="zone-status">${escapeHtml(personalMeta || progressMeta)}</small>`) : ''}
         <div class="zone-battle-bar" aria-hidden="true">
           <i class="bar-502" style="width:${share502}%"></i>

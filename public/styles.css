@@ -473,7 +473,7 @@ h1 {
   gap: 2px;
   grid-template-rows: auto auto auto;
   align-content: center;
-  padding: 7px 3px 15px;
+  padding: 6px 3px;
   font-size: clamp(14px, 1.18vw, 20px);
 }
 
@@ -614,10 +614,7 @@ h1 {
 }
 
 .compact-card .zone-battle-bar {
-  left: 6px;
-  right: 6px;
-  bottom: 5px;
-  height: 8px;
+  display: none;
 }
 
 .zone-battle-bar i {
