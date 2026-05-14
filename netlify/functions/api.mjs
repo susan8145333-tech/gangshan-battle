@@ -46,6 +46,16 @@ function appendHeader(headers, name, value) {
   }
 }
 
+function errorResponse(error) {
+  return new Response(JSON.stringify({
+    error: 'server error',
+    message: error?.message || String(error),
+  }), {
+    status: 500,
+    headers: { 'content-type': 'application/json; charset=utf-8' },
+  });
+}
+
 class FunctionResponse extends Writable {
   constructor(resolve) {
     super();
@@ -139,10 +149,7 @@ export default async (request) => {
       app.handle(nodeReq, nodeRes, error => {
         if (error) {
           console.error(error);
-          resolve(new Response(JSON.stringify({ error: 'server error' }), {
-            status: 500,
-            headers: { 'content-type': 'application/json; charset=utf-8' },
-          }));
+          resolve(errorResponse(error));
         } else if (!nodeRes.sent) {
           resolve(new Response(JSON.stringify({ error: 'not found' }), {
             status: 404,
@@ -153,10 +160,7 @@ export default async (request) => {
     });
   } catch (error) {
     console.error(error);
-    return new Response(JSON.stringify({ error: 'server error' }), {
-      status: 500,
-      headers: { 'content-type': 'application/json; charset=utf-8' },
-    });
+    return errorResponse(error);
   }
 };
 
