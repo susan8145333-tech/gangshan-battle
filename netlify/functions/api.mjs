@@ -41,7 +41,6 @@ function appendHeader(headers, name, value) {
 function errorResponse(error) {
   return new Response(JSON.stringify({
     error: 'server error',
-    message: error?.message || String(error),
   }), {
     status: 500,
     headers: { 'content-type': 'application/json; charset=utf-8' },
