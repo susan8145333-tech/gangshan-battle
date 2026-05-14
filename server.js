@@ -9,7 +9,10 @@ const app = express();
 let server = null;
 let wss = null;
 
-const DATA_DIR = process.env.GAME_DATA_DIR || path.join(__dirname, 'data');
+const DEFAULT_DATA_DIR = process.env.NETLIFY
+  ? path.join(os.tmpdir(), 'gangshan-battle-data')
+  : path.join(__dirname, 'data');
+const DATA_DIR = process.env.GAME_DATA_DIR || DEFAULT_DATA_DIR;
 const DATA_FILE = path.join(DATA_DIR, 'game.json');
 const STUDENT_AUDIO_DIR = path.join(DATA_DIR, 'student-audio');
 const PORT = process.env.PORT || 3000;
