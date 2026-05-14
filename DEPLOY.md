@@ -6,6 +6,31 @@
 
 建議使用 Render / Railway / Fly.io 這類可以常駐 Node 服務的平台。
 
+## Netlify 設定
+
+目前專案已加入 Netlify 版本：
+
+- 靜態頁面由 `public/` 發布。
+- `/api/*` 由 `netlify/functions/api.mjs` 轉接到原本的 Express API。
+- Netlify 不支援這個專案原本的 WebSocket 長連線，因此學生頁、教師頁、投影頁在 Netlify 上會自動改用 2.5 秒輪詢同步。
+
+Netlify Build Settings:
+
+- Build command: 留空
+- Publish directory: `public`
+- Functions directory: `netlify/functions`
+
+Netlify 必須設定 Environment Variables，否則 serverless function 重啟後資料可能消失：
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_STATE_ID=main`
+
+注意：
+
+- Netlify serverless function 的本機檔案系統不是永久儲存空間。
+- 學生錄音檔目前仍是伺服器檔案儲存邏輯；在 Netlify 上不適合長期保存錄音。答題、分數、土地、題庫等狀態請依賴 Supabase。
+
 ## Render 免費設定
 
 - Build Command: `npm install`

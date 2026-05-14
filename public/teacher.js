@@ -126,7 +126,20 @@ async function loadState() {
   render();
 }
 
+let pollingTimer = null;
+
+function startPolling() {
+  if (pollingTimer) return;
+  pollingTimer = setInterval(() => {
+    loadState().catch(() => {});
+  }, 2500);
+}
+
 function connectSocket() {
+  if (location.hostname.includes('netlify')) {
+    startPolling();
+    return;
+  }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}`);
   ws.onmessage = event => {
@@ -136,7 +149,13 @@ function connectSocket() {
     writeLocalBackup();
     render();
   };
-  ws.onclose = () => setTimeout(connectSocket, 1500);
+  ws.onerror = () => {
+    ws.close();
+    startPolling();
+  };
+  ws.onclose = () => {
+    if (!pollingTimer) setTimeout(connectSocket, 1500);
+  };
 }
 
 function render() {

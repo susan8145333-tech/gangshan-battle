@@ -66,7 +66,7 @@ async function apiFetch(url, options = {}, timeoutMs = 10000) {
 
 function connectionErrorText() {
   return location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-    ? '本機測試伺服器沒有回應。請改開線上網址：https://gangshan-battle.onrender.com/'
+    ? '本機測試伺服器沒有回應。請改開線上網址。'
     : '連線逾時，請確認網路後再送出一次。';
 }
 
@@ -216,7 +216,20 @@ async function loadState() {
   renderAll();
 }
 
+let pollingTimer = null;
+
+function startPolling() {
+  if (pollingTimer) return;
+  pollingTimer = setInterval(() => {
+    loadState().catch(() => {});
+  }, 2500);
+}
+
 function connectSocket() {
+  if (location.hostname.includes('netlify')) {
+    startPolling();
+    return;
+  }
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${proto}://${location.host}`);
   ws.onmessage = event => {
@@ -229,7 +242,13 @@ function connectSocket() {
     }
     renderAll();
   };
-  ws.onclose = () => setTimeout(connectSocket, 1500);
+  ws.onerror = () => {
+    ws.close();
+    startPolling();
+  };
+  ws.onclose = () => {
+    if (!pollingTimer) setTimeout(connectSocket, 1500);
+  };
 }
 
 function chooseClass(classNum) {

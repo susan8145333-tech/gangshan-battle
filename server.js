@@ -6,8 +6,8 @@ const path = require('path');
 const os = require('os');
 
 const app = express();
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+let server = null;
+let wss = null;
 
 const DATA_DIR = process.env.GAME_DATA_DIR || path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'game.json');
@@ -916,6 +916,8 @@ let gameData = initData();
 let supabaseSaveTimer = null;
 let supabaseSaving = false;
 let supabaseDirty = false;
+let initialized = false;
+let initializePromise = null;
 
 function restorableSnapshot(source = {}) {
   return {
@@ -1156,6 +1158,7 @@ function publicState() {
 }
 
 function broadcast() {
+  if (!wss) return;
   const message = JSON.stringify({ type: 'state', data: publicState() });
   wss.clients.forEach(client => {
     if (client.readyState === 1) client.send(message);
@@ -2232,11 +2235,10 @@ app.post('/api/teacher/restore', (req, res) => {
   res.json({ ok: true, state: publicState() });
 });
 
-wss.on('connection', ws => {
-  ws.send(JSON.stringify({ type: 'state', data: publicState() }));
-});
-
-async function start() {
+async function initializeGame() {
+  if (initialized) return;
+  if (initializePromise) return initializePromise;
+  initializePromise = (async () => {
   load();
   if (supabaseEnabled()) {
     try {
@@ -2258,6 +2260,18 @@ async function start() {
     save();
   }
   fs.mkdirSync(STUDENT_AUDIO_DIR, { recursive: true });
+  initialized = true;
+  })();
+  return initializePromise;
+}
+
+async function start() {
+  await initializeGame();
+  server = http.createServer(app);
+  wss = new WebSocketServer({ server });
+  wss.on('connection', ws => {
+    ws.send(JSON.stringify({ type: 'state', data: publicState() }));
+  });
 
   server.listen(PORT, '0.0.0.0', () => {
     let localIP = 'localhost';
@@ -2277,7 +2291,14 @@ async function start() {
   });
 }
 
-start().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+if (require.main === module) {
+  start().catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  app,
+  initializeGame,
+};
