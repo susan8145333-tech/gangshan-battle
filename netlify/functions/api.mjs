@@ -1,12 +1,8 @@
 import { Buffer } from 'node:buffer';
 import { Duplex, Readable, Writable } from 'node:stream';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
-let serverModulePromise;
+import serverModule from '../../server.js';
 
 function applyNetlifyEnv() {
-  process.env.GAME_DATA_DIR ||= join(tmpdir(), 'gangshan-battle-data');
   const env = globalThis.Netlify?.env;
   if (!env) return;
   for (const key of ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_STATE_ID']) {
@@ -17,12 +13,8 @@ function applyNetlifyEnv() {
 
 async function getServerModule() {
   applyNetlifyEnv();
-  if (!serverModulePromise) {
-    serverModulePromise = import('../../server.js');
-  }
-  const mod = await serverModulePromise;
-  await mod.default.initializeGame();
-  return mod.default;
+  await serverModule.initializeGame();
+  return serverModule;
 }
 
 function headersObject(headers) {

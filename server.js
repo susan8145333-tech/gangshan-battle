@@ -9,16 +9,17 @@ const app = express();
 let server = null;
 let wss = null;
 
-const DEFAULT_DATA_DIR = process.env.NETLIFY
+const DEFAULT_DATA_DIR = (
+  process.env.NETLIFY
+  || process.env.AWS_LAMBDA_FUNCTION_NAME
+  || process.env.LAMBDA_TASK_ROOT
+)
   ? path.join(os.tmpdir(), 'gangshan-battle-data')
   : path.join(__dirname, 'data');
 const DATA_DIR = process.env.GAME_DATA_DIR || DEFAULT_DATA_DIR;
 const DATA_FILE = path.join(DATA_DIR, 'game.json');
 const STUDENT_AUDIO_DIR = path.join(DATA_DIR, 'student-audio');
 const PORT = process.env.PORT || 3000;
-const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const SUPABASE_STATE_ID = process.env.SUPABASE_STATE_ID || 'main';
 
 const CLASSES = ['502', '503'];
 const CLAIM_THRESHOLD = 8;
@@ -1069,18 +1070,35 @@ function saveLocal() {
   fs.writeFileSync(DATA_FILE, JSON.stringify(gameData, null, 2), 'utf8');
 }
 
+function runtimeEnv(key) {
+  return globalThis.Netlify?.env?.get?.(key) || process.env[key] || '';
+}
+
+function supabaseUrl() {
+  return runtimeEnv('SUPABASE_URL').replace(/\/$/, '');
+}
+
+function supabaseServiceRoleKey() {
+  return runtimeEnv('SUPABASE_SERVICE_ROLE_KEY');
+}
+
+function supabaseStateId() {
+  return runtimeEnv('SUPABASE_STATE_ID') || 'main';
+}
+
 function supabaseEnabled() {
-  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+  return Boolean(supabaseUrl() && supabaseServiceRoleKey());
 }
 
 async function supabaseRequest(pathname, options = {}) {
+  const key = supabaseServiceRoleKey();
   const headers = {
-    apikey: SUPABASE_SERVICE_ROLE_KEY,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    apikey: key,
+    Authorization: `Bearer ${key}`,
     'Content-Type': 'application/json',
     ...(options.headers || {}),
   };
-  return fetch(`${SUPABASE_URL}/rest/v1/${pathname}`, {
+  return fetch(`${supabaseUrl()}/rest/v1/${pathname}`, {
     ...options,
     headers,
   });
@@ -1088,7 +1106,7 @@ async function supabaseRequest(pathname, options = {}) {
 
 async function loadFromSupabase() {
   if (!supabaseEnabled()) return false;
-  const id = encodeURIComponent(SUPABASE_STATE_ID);
+  const id = encodeURIComponent(supabaseStateId());
   const res = await supabaseRequest(`game_state?id=eq.${id}&select=data`, { method: 'GET' });
   if (!res.ok) {
     throw new Error(`Supabase 讀取失敗：HTTP ${res.status} ${await res.text()}`);
@@ -1105,7 +1123,7 @@ async function saveToSupabaseNow() {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates' },
     body: JSON.stringify({
-      id: SUPABASE_STATE_ID,
+      id: supabaseStateId(),
       data: restorableSnapshot(gameData),
       updated_at: new Date().toISOString(),
     }),
@@ -1929,7 +1947,7 @@ app.get('/api/storage', (req, res) => {
   res.json({
     mode: supabaseEnabled() ? 'supabase' : 'local-file',
     supabaseConfigured: supabaseEnabled(),
-    stateId: SUPABASE_STATE_ID,
+    stateId: supabaseStateId(),
   });
 });
 
