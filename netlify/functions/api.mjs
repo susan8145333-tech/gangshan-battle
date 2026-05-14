@@ -1,9 +1,12 @@
 import { Buffer } from 'node:buffer';
 import { Duplex, Readable, Writable } from 'node:stream';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 let serverModulePromise;
 
 function applyNetlifyEnv() {
+  process.env.GAME_DATA_DIR ||= join(tmpdir(), 'gangshan-battle-data');
   const env = globalThis.Netlify?.env;
   if (!env) return;
   for (const key of ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_STATE_ID']) {
